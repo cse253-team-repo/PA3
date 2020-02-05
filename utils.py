@@ -17,7 +17,7 @@ def iou(pred, target):
         intersection = torch.sum((pred*target)[torch.all(target==one_hot_coding,axis=-1)])# intersection calculation
         union = torch.sum(pred[torch.all(pred==one_hot_coding, axis=-1)]) + \
                 torch.sum(target[torch.all(target==one_hot_coding, axis=-1)]) - intersection#Union calculation
-        print("class: {} intersection: {} union: {}", cls, intersection, union)
+        print("class: {} intersection: {} union: {}".format(cls, intersection, union))
         if union == 0:
             ious.append(float('nan'))  # if there is no ground truth, do not include in evaluation
         else:
