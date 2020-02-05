@@ -1,10 +1,10 @@
 import torch
 def iou(pred, target):
     """
-        Calculate IOU in a for each class
+        Calculate IOU in a for each class; Assume data is one hot encoding
         Args:
-            pred: prediction label with one hot encoding
-            target: target label with one hot encoding
+            pred: prediction label with one hot encoding; shape -- [n_batch, rows, cols, n_class]
+            target: target label with one hot encoding; shape -- [n_batch, rows, cols, n_class]
         Returns:
             ious: list of iou for each class
     """
@@ -17,7 +17,7 @@ def iou(pred, target):
         intersection = torch.sum((pred*target)[torch.all(target==one_hot_coding,axis=-1)])# intersection calculation
         union = torch.sum(pred[torch.all(pred==one_hot_coding, axis=-1)]) + \
                 torch.sum(target[torch.all(target==one_hot_coding, axis=-1)]) - intersection#Union calculation
-        print("class: {} intersection: {} union: {}".format(cls, intersection, union))
+        #print("class: {} intersection: {} union: {}".format(cls, intersection, union))
         if union == 0:
             ious.append(float('nan'))  # if there is no ground truth, do not include in evaluation
         else:
@@ -27,8 +27,20 @@ def iou(pred, target):
 
 
 def pixel_acc(pred, target):
-    pass
-    #Complete this function
+    """
+        Calculate the accuracy for all the pixels
+        Args:
+            pred: prediction label with one hot encoding;
+            target: target label with one hot encoding;
+        Returns:
+            accuracy: percentage of correct prediction for all the pixels of all the images
+    """
+    y_hat = torch.argmax(pred, axis=-1)
+    y = torch.argmax(target, axis=-1)
+    correct = torch.sum(y_hat==y)
+    # Number of pixels
+    N = (y.reshape[-1,1].shape[0]) 
+    return correct / N
 
 
 if __name__ == "__main__":
@@ -47,3 +59,4 @@ if __name__ == "__main__":
          [ 0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.],
          [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.]]])
     print(iou(pred, target))
+    print(pixel_acc(pred, target))
