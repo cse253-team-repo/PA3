@@ -9,7 +9,7 @@ def iou(pred, target):
             ious: list of iou for each class
     """
     ious = []
-    n_class = target.shpae[-1]
+    n_class = target.shape[-1]
 
     for cls in range(n_class):
         # Complete this function
