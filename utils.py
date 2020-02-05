@@ -13,7 +13,7 @@ def iou(pred, target):
 
     for cls in range(n_class):
         # Complete this function
-        one_hot_coding = torch.eye(n_class)[clc,:]
+        one_hot_coding = torch.eye(n_class)[cls,:]
         intersection = torch.sum((pred*target)[torch.all(target==one_hot_coding,axis=-1)])# intersection calculation
         union = torch.sum(pred[torch.all(pred==one_hot_coding, axis=-1)]) + \
                 torch.sum(target[torch.all(target==one_hot_coding, axis=-1)]) - intersection#Union calculation
