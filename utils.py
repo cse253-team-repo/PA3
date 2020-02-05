@@ -37,9 +37,9 @@ def pixel_acc(pred, target):
     """
     y_hat = torch.argmax(pred, axis=-1)
     y = torch.argmax(target, axis=-1)
-    correct = torch.sum(y_hat==y)
+    correct = torch.sum(y_hat==y).item()
     # Number of pixels
-    N = (y.reshape(-1,1).shape[0]) 
+    N = (y.reshape(-1,1).shape[0])
     print(N, correct)
     return correct / N
 
