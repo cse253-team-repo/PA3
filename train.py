@@ -3,15 +3,18 @@ import torch
 import torch.nn as nn
 from dataloader import CityScapesDataset
 from torch.utils.data import DataLoader
+import numpy as np
 import torch.optim as optim
 import time
+import pdb
+
 
 
 
 class Train:
 	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv",
 					model="UNet", loss_method="cross-entropy", opt_method ="Adam",
-					batch_size=1, img_shape=(512,512), epochs=20, num_classes=32, lr=0.01, 
+					batch_size=1, img_shape=(512,512), epochs=1000, num_classes=32, lr=0.01, 
 					GPU=True
 				):
 		self.batch_size = batch_size
@@ -53,15 +56,17 @@ class Train:
 				itr_start = time.time()
 				optimizer.zero_grad()
 				train_x, train_y_one_hot, train_y = data
-				print(train_x.shape)
-				train_x.to(self.device)
-				train_y_one_hot.to(self.device)
-				train_y.to(self.device)
+				#print(train_x.shape)
+				#pdb.set_trace()
+				train_x = train_x.to(self.device)
+				train_y_one_hot = train_y_one_hot.to(self.device)
+				train_y = train_y.to(self.device)
 				output = self.model(train_x)
 				loss = criterio(output, train_y)
 				loss.backward()
 				optimizer.step()
-				loss_itr.append(loss.cpu().numpy()[0])
+				loss = loss.cpu().detach().numpy()
+				loss_itr.append(loss)
 				itr_end = time.time()
 				if verbose:
 					print("Iterations: {} \t loss: {} \t time: {}".format(i, loss_itr[-1], itr_start - itr_end))
@@ -78,7 +83,7 @@ class Train:
 
 if __name__ == "__main__":
 	train = Train()
-	x = torch.zeros(1, 3, 512, 512)
+	x = torch.randn(1, 3, 512, 512)
 	y =	torch.empty(1, 512, 512, dtype=torch.long).random_(32)
 	train.train_loader = [(x, y, y)]
 	train.train_on_batch()

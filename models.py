@@ -88,7 +88,7 @@ class UNet(nn.Module):
 		
 		
 		# verify the output shape 
-		
+		"""
 		print(en_x1.shape)
 		print(en_x2.shape)
 		print(en_x3.shape)
@@ -99,6 +99,7 @@ class UNet(nn.Module):
 		print(de_h3.shape)
 		print(de_h4.shape)
 		print(h5.shape)
+		"""
 		
 		return h5
 	def resize_shape(self,shape1, shape2):
