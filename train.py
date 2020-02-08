@@ -69,7 +69,7 @@ class Train:
 				loss_itr.append(loss)
 				itr_end = time.time()
 				if verbose:
-					print("Iterations: {} \t loss: {} \t time: {}".format(i, loss_itr[-1], itr_start - itr_end))
+					print("Iterations: {} \t loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
 			loss_epoch.append(np.mean(loss_itr))
 			print("*"*10)
 			print("Epoch: {} \t loss: {}".format(epoch, loss_epoch[-1]))
