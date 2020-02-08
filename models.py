@@ -88,6 +88,7 @@ class UNet(nn.Module):
 		
 		
 		# verify the output shape 
+		
 		print(en_x1.shape)
 		print(en_x2.shape)
 		print(en_x3.shape)
