@@ -65,7 +65,6 @@ class FCN(nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
-        x = self.conv5(x)
         
         out_encoder = self.conv5(x)
         # score = __(self.relu(__(out_encoder)))     
@@ -76,6 +75,6 @@ class FCN(nn.Module):
         y = self.deconv4(y)
         out_decoder = self.deconv5(y)
 
-        score = self.classifier(out_decoder)
+        score = self.classifier(out_decoder)                   
         
         return score  # size=(N, n_class, x.H/1, x.W/1)
