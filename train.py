@@ -7,6 +7,7 @@ import numpy as np
 import torch.optim as optim
 import time
 import torch.functional as F
+from utils import *
 # from tqdm import tqdm
 
 import pdb
@@ -14,18 +15,20 @@ import pdb
 CUDA_DIX = [0,1]
 class Train:
 	def __init__(self,
-				 test_path="./test.csv",
+				 test_path = "./test.csv",
 				 train_path = "./train.csv",
 				 valid_path = "./val.csv",
 				 model="UNet",
-				 loss_method="cross-entropy",
+				 loss_method = "cross-entropy",
 				 opt_method ="Adam",
-				 batch_size=16,
-				 img_shape=(512,512),
-				 epochs=1000,
-				 num_classes=34,
-				 lr=0.01,
-				 GPU=True
+				 batch_size = 16,
+				 img_shape = (512,512),
+				 epochs = 1000,
+				 num_classes=  34,
+				 lr = 0.01,
+				 GPU = True,
+				 save_best = True,
+				 save_path = "my_model.pt"
 				):
 		self.batch_size = batch_size
 		self.epochs = epochs
@@ -33,6 +36,8 @@ class Train:
 		self.lr = lr
 		self.opt_method = opt_method
 		self.loss_method = loss_method
+		self.save_best = save_best
+		self.save_path = save_path
 
 		if GPU:
 			self.gpus = [ix for ix in CUDA_DIX]
@@ -89,7 +94,8 @@ class Train:
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss().to(self.device)
 		loss_epoch = []
-
+		valid_accs = []
+		MAX = 0
 		for epoch in range(self.epochs):
 			loss_itr = []
 			for i, (img, target, label) in enumerate(self.train_loader):
@@ -110,12 +116,21 @@ class Train:
 				loss_itr.append(loss.item())
 				itr_end = time.time()
 				if verbose:
-					print("Iterations: {} \t loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
+					print("Iterations: {} \t training loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
 			loss_epoch.append(np.mean(loss_itr))
 			print("*"*10)
-			print("Epoch: {} \t loss: {}".format(epoch, loss_epoch[-1]))
+			print("Epoch: {} \t training loss: {}".format(epoch, loss_epoch[-1]))
 			if lr_decay:
 				lr_sheduler.step(epoch)
+
+			valid_acc, valid_loss = self.check_accuracy(self.valid_loader, get_loss=True)
+			print("Epoch: {} \t valid loss: {} \t valid accuracy: {}".format(epoch, valid_loss, valid_acc))
+			if self.save_best:
+				if valid_acc > MAX:
+					self.save_weights(self.save_path)
+					MAX = valid_acc
+			valid_accs.append(valid_acc)
+
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
@@ -130,13 +145,24 @@ class Train:
 				y = y.to(self.device)
 				out = self.model(x)
 				loss = criterio(out, y)
-				losses.append(loss.numpy())
+				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out,dim=1)
 				acc = pixel_acc(y_hat, y)
 				accs.append(acc)
 		if get_loss:
 			return np.mean(accs), np.mean(losses)
 		return np.mean(accs)
+
+	def save_weights(self,path):
+		print("Saving the model ...")
+		torch.save(self.model.state_dict(), path)
+		print("Saving Done!")
+
+	def load_weights(self,path):
+		print("Loading the parameters")
+		self.model.load_state_dict(torch.load(path))
+		self.model.eval()
+
 
 
 if __name__ == "__main__":
