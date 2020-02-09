@@ -1,4 +1,5 @@
 from models import UNet
+from basic_fcn import FCN
 from dataloader import CityScapesDataset
 from torch.utils.data import DataLoader
 from utils import pixel_acc
@@ -8,10 +9,6 @@ import numpy as np
 import torch.optim as optim
 import time
 import pdb
-
-
-
-
 
 class Train:
 	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv",
@@ -33,6 +30,7 @@ class Train:
 		if model == "UNet":
 			self.model = nn.DataParallel(UNet(num_classes)).to(self.device)
 		else:
+			
 			raise ValueError("Not implement {}".format(model))
 		self.opt_method = opt_method
 		self.train_dst = CityScapesDataset(train_path)
@@ -106,18 +104,11 @@ class Train:
 		return np.mean(accs)
 
 
-
-
-
-
-
-
-
 if __name__ == "__main__":
-	train = Train()
-	x = torch.randn(2, 3, 1024, 1024)
-	y =	torch.empty(2, 1024, 1024, dtype=torch.long).random_(32)
-	#train.train_loader = [(x, y, y)]
+	train = Train(model = )
+	# x = torch.randn(2, 3, 1024, 1024)
+	# y =	torch.empty(2, 1024, 1024, dtype=torch.long).random_(32)
+	# #train.train_loader = [(x, y, y)]
 	train.train_on_batch()
 
 
