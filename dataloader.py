@@ -148,7 +148,7 @@ class CityScapesDataset(Dataset):
 
         # create one-hot encoding
         h, w = label.shape[0], label.shape[1]
-        target = torch.zeros(self.n_class, h, w)
+        target = torch.zeros(self.n_class, h, w).long()
 
         for c in range(self.n_class):
             target[c][label == c] = 1

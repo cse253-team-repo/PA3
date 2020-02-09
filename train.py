@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 import torch.optim as optim
 import time
+import torch.functional as F
 # from tqdm import tqdm
 
 import pdb
@@ -19,7 +20,7 @@ class Train:
 				 model="UNet",
 				 loss_method="cross-entropy",
 				 opt_method ="Adam",
-				 batch_size=8,
+				 batch_size=16,
 				 img_shape=(512,512),
 				 epochs=1000,
 				 num_classes=34,
@@ -84,7 +85,7 @@ class Train:
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss()
+			criterio = nn.CrossEntropyLoss().to(self.device)
 		loss_epoch = []
 
 		for epoch in range(self.epochs):
@@ -93,18 +94,18 @@ class Train:
 				itr_start = time.time()
 				#print(train_x.shape)
 				#pdb.set_trace()
-				train_x = img.to(self.device)
+				img = img.to(self.device)
 				train_y_one_hot = target.to(self.device)
 				train_y = label.to(self.device)
 
 				optimizer.zero_grad()
-				output = self.model(train_x)
-				loss = criterio(output, train_y_one_hot)
+				output = self.model(img)
+				# print(train_y_one_hot.shape,output.shape)
+				loss = criterio(output, train_y)
 
 				loss.backward()
 				optimizer.step()
-				loss = loss.cpu().detach().numpy()
-				loss_itr.append(loss)
+				loss_itr.append(loss.item())
 				itr_end = time.time()
 				if verbose:
 					print("Iterations: {} \t loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
