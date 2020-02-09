@@ -8,7 +8,8 @@ import numpy as np
 import torch.optim as optim
 import time
 import torch.functional as F
-from utils import *
+from utils import load_config
+import yaml
 # from tqdm import tqdm
 
 import pdb
@@ -16,31 +17,24 @@ import pdb
 CUDA_DIX = [0,1]
 class Train:
 	def __init__(self,
+				 config,
 				 test_path = "./test.csv",
 				 train_path = "./train.csv",
 				 valid_path = "./val.csv",
-				 model="UNet",
-				 loss_method = "cross-entropy",
-				 opt_method ="Adam",
-				 batch_size = 2,
-				 img_shape = (512,512),
-				 epochs = 1000,
-				 num_classes=  34,
-				 lr = 0.01,
-				 GPU = True,
-				 save_best = True,
-				 retrain = False,
 				 save_path = "my_model.pt"
 				):
-		self.batch_size = batch_size
-		self.epochs = epochs
-		self.num_classes = num_classes
-		self.lr = lr
-		self.opt_method = opt_method
-		self.loss_method = loss_method
-		self.save_best = save_best
 		self.save_path = save_path
-		self.retrain = retrain
+		self.batch_size = config["batch_size"]
+		self.epochs = config["epochs"]
+		self.num_classes = config["num_classes"]
+		self.lr = config["lr"]
+		self.opt_method = config["opt_method"]
+		self.loss_method = config["loss_method"]
+		self.save_best = config["save_best"]
+		self.retrain = config["retrain"]
+		GPU = config["GPU"]
+		img_shape = tuple(config["img_shape"])
+		model = config["model"]
 		if GPU:
 			self.gpus = [ix for ix in CUDA_DIX]
 		else:
@@ -51,13 +45,12 @@ class Train:
 		networks = {"UNet":UNet,
 					"base_fc":FCN}
 
-		self.model = networks[model](num_classes).to(self.device)
+		self.model = networks[model](self.num_classes).to(self.device)
 
 
 		if self.num_gpus > 1:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
 
-		self.opt_method = opt_method
 		transform = transforms.Compose([
 			RandomCrop(img_shape),
 			ToTensor(),
@@ -74,14 +67,14 @@ class Train:
 			len(self.valid_dst),
 			len(self.test_dst)))
 		self.train_loader = DataLoader(self.train_dst,
-									   batch_size=batch_size,
+									   batch_size=self.batch_size,
 									   shuffle=True,
 									   num_workers=4)
 		self.valid_loader = DataLoader(self.valid_dst,
-									   batch_size=batch_size,
+									   batch_size=self.batch_size,
 									   shuffle=True, num_workers=4)
 		self.test_loader = DataLoader(self.test_dst,
-									  batch_size=batch_size,
+									  batch_size=self.batch_size,
 									  shuffle=True,
 									  num_workers=4)
 		if not self.retrain:
@@ -172,7 +165,8 @@ class Train:
 
 
 if __name__ == "__main__":
-	train = Train()
+	config = load_config("Unet_config.yaml")
+	train = Train(config)
 	train.train_on_batch()
 
 
