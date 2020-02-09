@@ -1,17 +1,17 @@
 import torch
 import yaml
+import pdb
 def iou(pred, target):
     """
         Calculate IOU in a for each class; Assume data is one hot encoding
         Args:
-            pred: prediction label with one hot encoding; shape -- [n_batch, rows, cols, n_class]
-            target: target label with one hot encoding; shape -- [n_batch, rows, cols, n_class]
+            pred: prediction label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+            target: target label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
         Returns:
             ious: list of iou for each class
     """
     ious = []
     n_class = target.shape[-1]
-
     for cls in range(n_class):
         # Complete this function
         one_hot_coding = torch.eye(n_class)[cls,:]
@@ -25,6 +25,21 @@ def iou(pred, target):
             ious.append(intersection/union)# Append the calculated IoU to the list ious
     
     return ious
+
+def iou2(pred, target):
+    """
+        Calculate IOU in a for each class; Assume data is one hot encoding
+        Args:
+            pred: prediction label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+            target: target label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+        Returns:
+            ious: list of iou for each class
+    """
+    intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
+    union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
+    ious = (intersection / union).tolist()
+    return ious
+
 def load_config(path):
     """
     Load the configuration from config.yaml.
@@ -63,5 +78,9 @@ if __name__ == "__main__":
         [[ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
          [ 0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.],
          [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.]]])
+    pred = pred.unsqueeze(0)
+    target = target.unsqueeze(0)
+    pdb.set_trace()
     print(iou(pred, target))
-    print(pixel_acc(pred, target))
+    print(iou2(pred.permute(0, 3, 1, 2), target.permute(0, 3, 1, 2)))
+    #print(pixel_acc(pred, target))
