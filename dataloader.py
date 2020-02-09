@@ -130,6 +130,8 @@ class CityScapesDataset(Dataset):
         self.n_class   = n_class
         # Add any transformations here
         self.transform = transforms
+        if self.transform==None:
+            self.transform = "resize"
 
     def __len__(self):
         return len(self.data)

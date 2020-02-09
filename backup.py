@@ -20,43 +20,42 @@ class Loss:
 class UNet(nn.Module):
 	def __init__(self, num_classes):
 		super(UNet, self).__init__()
-		k = 4
-		self.layer1 = nn.Sequential(nn.Conv2d(3, 64//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(64//k, 64//k, 3, padding=1), nn.ReLU()
+		self.layer1 = nn.Sequential(nn.Conv2d(3, 64, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(64, 64, 3, padding=1), nn.ReLU()
 									)
 		self.layer2 = nn.Sequential(nn.MaxPool2d(2), 
-									nn.Conv2d(64//k, 128//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(128//k, 128//k, 3, padding=1), nn.ReLU()
+									nn.Conv2d(64, 128, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(128, 128, 3, padding=1), nn.ReLU()
 									)
 		self.layer3 = nn.Sequential(nn.MaxPool2d(2),
-									nn.Conv2d(128//k, 256//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(256//k, 256//k, 3, padding=1), nn.ReLU()
+									nn.Conv2d(128, 256, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(256, 256, 3, padding=1), nn.ReLU()
 									)
 		self.layer4 = nn.Sequential(nn.MaxPool2d(2),
-									nn.Conv2d(256//k, 512//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(512//k, 512//k, 3, padding=1), nn.ReLU()
+									nn.Conv2d(256, 512, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(512, 512, 3, padding=1), nn.ReLU()
 									)
 		self.layer5 = nn.Sequential(nn.MaxPool2d(2),
-									nn.Conv2d(512//k, 1024//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(1024//k, 1024//k, 3, padding=1), nn.ReLU()
+									nn.Conv2d(512, 1024, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(1024, 1024, 3, padding=1), nn.ReLU()
 									#nn.Conv2d(1024, 512, 2), 
 									)
-		self.deconv1 = nn.ConvTranspose2d(1024//k, 512//k, 2, stride=2)
-		self.layer6 = nn.Sequential(nn.Conv2d(1024//k, 512//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(512//k, 512//k, 3, padding=1), nn.ReLU()
+		self.deconv1 = nn.ConvTranspose2d(1024, 512, 2, stride=2)
+		self.layer6 = nn.Sequential(nn.Conv2d(1024, 512, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(512, 512, 3, padding=1), nn.ReLU()
 									)
-		self.deconv2 = nn.ConvTranspose2d(512//k, 256//k, 2, stride=2)
-		self.layer7 = nn.Sequential(nn.Conv2d(512//k, 256//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(256//k, 256//k, 3, padding=1), nn.ReLU()
+		self.deconv2 = nn.ConvTranspose2d(512, 256, 2, stride=2)
+		self.layer7 = nn.Sequential(nn.Conv2d(512, 256, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(256, 256, 3, padding=1), nn.ReLU()
 									)
-		self.deconv3 = nn.ConvTranspose2d(256//k, 128//k, 2, stride=2)
-		self.layer8 = nn.Sequential(nn.Conv2d(256//k, 128//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(128//k, 128//k, 3, padding=1), nn.ReLU()
+		self.deconv3 = nn.ConvTranspose2d(256, 128, 2, stride=2)
+		self.layer8 = nn.Sequential(nn.Conv2d(256, 128, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(128, 128, 3, padding=1), nn.ReLU()
 									)
-		self.deconv4 = nn.ConvTranspose2d(128//k, 64//k, 2, stride=2)
-		self.layer9 = nn.Sequential(nn.Conv2d(128//k, 64//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(64//k, 64//k, 3, padding=1), nn.ReLU(),
-									nn.Conv2d(64//k, num_classes, 1)
+		self.deconv4 = nn.ConvTranspose2d(128, 64, 2, stride=2)
+		self.layer9 = nn.Sequential(nn.Conv2d(128, 64, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(64, 64, 3, padding=1), nn.ReLU(),
+									nn.Conv2d(64, num_classes, 1)
 									)
 
 
@@ -88,7 +87,20 @@ class UNet(nn.Module):
 		h5 = self.layer9(torch.cat([en_x1[:,:,h1:h2,w1:w2], de_h4], dim=1))
 		
 		
-		# verify the output shape
+		# verify the output shape 
+		"""
+		print(en_x1.shape)
+		print(en_x2.shape)
+		print(en_x3.shape)
+		print(en_x4.shape)
+		print(en_x5.shape)
+		print(de_h1.shape)
+		print(de_h2.shape)
+		print(de_h3.shape)
+		print(de_h4.shape)
+		print(h5.shape)
+		"""
+		
 		return h5
 	def resize_shape(self,shape1, shape2):
 		hh1, ww1 = shape1[-2], shape1[-1]
