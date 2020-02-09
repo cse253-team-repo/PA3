@@ -13,7 +13,7 @@ from utils import *
 
 import pdb
 
-CUDA_DIX = [0,1,2,3]
+CUDA_DIX = [0,1]
 class Train:
 	def __init__(self,
 				 test_path = "./test.csv",
@@ -22,13 +22,14 @@ class Train:
 				 model="UNet",
 				 loss_method = "cross-entropy",
 				 opt_method ="Adam",
-				 batch_size = 32,
+				 batch_size = 2,
 				 img_shape = (512,512),
 				 epochs = 1000,
 				 num_classes=  34,
 				 lr = 0.01,
 				 GPU = True,
 				 save_best = True,
+				 retrain = False,
 				 save_path = "my_model.pt"
 				):
 		self.batch_size = batch_size
@@ -39,7 +40,7 @@ class Train:
 		self.loss_method = loss_method
 		self.save_best = save_best
 		self.save_path = save_path
-
+		self.retrain = retrain
 		if GPU:
 			self.gpus = [ix for ix in CUDA_DIX]
 		else:
@@ -83,6 +84,9 @@ class Train:
 									  batch_size=batch_size,
 									  shuffle=True,
 									  num_workers=4)
+		if not self.retrain:
+			self.load_weights(self.save_path)
+
 		
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
