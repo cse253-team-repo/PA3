@@ -87,20 +87,7 @@ class UNet(nn.Module):
 		h5 = self.layer9(torch.cat([en_x1[:,:,h1:h2,w1:w2], de_h4], dim=1))
 		
 		
-		# verify the output shape 
-		"""
-		print(en_x1.shape)
-		print(en_x2.shape)
-		print(en_x3.shape)
-		print(en_x4.shape)
-		print(en_x5.shape)
-		print(de_h1.shape)
-		print(de_h2.shape)
-		print(de_h3.shape)
-		print(de_h4.shape)
-		print(h5.shape)
-		"""
-		
+		# verify the output shape
 		return h5
 	def resize_shape(self,shape1, shape2):
 		hh1, ww1 = shape1[-2], shape1[-1]

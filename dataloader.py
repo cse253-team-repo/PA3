@@ -79,6 +79,48 @@ labels_classes = [
     Label(  'bicycle'              , 33 ,       18 , 'vehicle'         , 7       , True         , False        , (119, 11, 32) )
 ]
 
+class CenterCrop(object):
+    def __init__(self,arg):
+        self.transform = transforms.CenterCrop(arg)
+    def __call__(self, sample):
+        img, label = sample
+        return self.transform(img),self.transform(label)
+
+class Resize(object):
+    def __init__(self,arg):
+        self.transform = transforms.Resize(arg)
+    def __call__(self, sample):
+        img, label = sample
+        return self.transform(img),self.transform(label)
+
+class Normalize(object):
+    def __init__(self,mean,std):
+        self.transform = transforms.Normalize(mean, std)
+    def __call__(self, sample):
+        img, label = sample
+        return self.transform(img),label
+
+class ToTensor(object):
+    def __init__(self):
+        self.transform = transforms.ToTensor()
+    def __call__(self, sample):
+        img, label = sample
+        label = np.array(label)
+        return self.transform(img), torch.from_numpy(label.copy()).long()
+
+class RandomCrop(object):
+    def __init__(self,output_size):
+        self.output_size = output_size
+    def __call__(self, sample):
+        img, label = sample
+
+        i, j, h, w = transforms.RandomCrop.get_params(
+            img, output_size=self.output_size)
+
+        img = transforms.functional.crop(img, i, j, h, w)
+        label = transforms.functional.crop(label, i, j, h, w)
+        return img,label
+
 class CityScapesDataset(Dataset):
 
     def __init__(self, csv_file, n_class=n_class, transforms=None):
@@ -93,34 +135,13 @@ class CityScapesDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name   = self.data.iloc[idx, 0]
-
-        img = np.asarray(Image.open(img_name).convert('RGB'))
-        img = np.array(img)
+        img = Image.open(img_name)
 
         label_name = self.data.iloc[idx, 1]
-        label = np.asarray(Image.open(label_name))
-        # reduce mean
-        img = img[:, :, ::-1]  # switch to BGR
-        # img = np.transpose(img, (2, 0, 1))
-        #  / 255.
-        # img[0] -= self.means[0]
-        # img[1] -= self.means[1]
-        # img[2] -= self.means[2]
+        label = Image.open(label_name)
 
-        # img = img * 255
-        img = img.astype(np.uint8)
-        img = np.array(self.transform(img)).transpose(2,0,1)
-        # reduce mean
-        img = img / 255.
-        img[0] = img[0] - np.mean(img[0])
-        img[1] = img[1] - np.mean(img[1])
-        img[2] = img[2] - np.mean(img[2])
-
-        label = np.array(self.transform(label))
-
-        # convert to tensor
-        img = torch.from_numpy(img.copy()).float()
-        label = torch.from_numpy(label.copy()).long()
+        if self.transform != None:
+            img,label = self.transform((img,label))
 
         # create one-hot encoding
         h, w = label.shape[0], label.shape[1]
@@ -135,17 +156,28 @@ if __name__ == "__main__":
     # hard coding
     h,w = 1024, 2048
 
-    crop_method = 'resize'
+    crop_method = 'random'
     
     if crop_method == 'center':
         transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.CenterCrop((h//2,w//2)),
+            CenterCrop((h//2,w//2)),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406],
+                      std=[0.229, 0.224, 0.225])
             ])
     elif crop_method == 'resize':
         transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize((h//2,w//2)),
+            Resize((h//2,w//2)),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225])
+            ])
+    elif crop_method == 'random':
+        transform = transforms.Compose([
+            RandomCrop((h//2,w//2)),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406],
+                      std=[0.229, 0.224, 0.225])
             ])
 
     trainset = CityScapesDataset("train.csv", transforms=transform)
