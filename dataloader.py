@@ -118,7 +118,7 @@ class CityScapesDataset(Dataset):
         elif self.transform == 'resize':
             transform = transforms.Compose([
                 transforms.ToPILImage(),
-                transforms.Resize((ratio*h,ratio*w)),
+                transforms.Resize((int(ratio*h),int(ratio*w))),
                 ])
             
             img = np.array(transform(img)).transpose(2,0,1)
@@ -184,7 +184,7 @@ class CityScapesDataset(Dataset):
         return img, target, label
 
 if __name__ == "__main__":
-    transform = 'randomcrop'
+    transform = 'center'
 
     trainset = CityScapesDataset("train.csv", transforms=transform)
     

@@ -11,8 +11,8 @@ import time
 import pdb
 
 class Train:
-	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv", transform='resize',
-					model="UNet", loss_method="cross-entropy", opt_method ="Adam",
+	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv", 
+					transform='resize', model="UNet", loss_method="cross-entropy", opt_method ="Adam",
 					batch_size=1, img_shape=(512,512), epochs=1000, num_classes=34, lr=0.01, 
 					GPU=True
 				):
