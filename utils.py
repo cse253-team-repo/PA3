@@ -26,21 +26,19 @@ def iou(pred, target):
     return ious
 
 
-def pixel_acc(pred, target):
+def pixel_acc(y_hat, y):
     """
         Calculate the accuracy for all the pixels
         Args:
-            pred: prediction label with one hot encoding;
-            target: target label with one hot encoding;
+            pred: prediction label
+            y: target label;
         Returns:
             accuracy: percentage of correct prediction for all the pixels of all the images
     """
-    y_hat = torch.argmax(pred, axis=-1)
-    y = torch.argmax(target, axis=-1)
     correct = torch.sum(y_hat==y).item()
     # Number of pixels
-    N = (y.reshape(-1,1).shape[0])
-    print(N, correct)
+    N = (y.view(-1,1).shape[0])
+    #print(N, correct)
     return correct / N
 
 
