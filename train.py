@@ -11,9 +11,9 @@ import time
 import pdb
 
 class Train:
-	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv",
+	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv", transform='resize',
 					model="UNet", loss_method="cross-entropy", opt_method ="Adam",
-					batch_size=1, img_shape=(512,512), epochs=1000, num_classes=32, lr=0.01, 
+					batch_size=1, img_shape=(512,512), epochs=1000, num_classes=34, lr=0.01, 
 					GPU=True
 				):
 		self.batch_size = batch_size
@@ -30,10 +30,10 @@ class Train:
 		if model == "UNet":
 			self.model = nn.DataParallel(UNet(num_classes)).to(self.device)
 		else:
-			
-			raise ValueError("Not implement {}".format(model))
+			self.model = nn.DataParallel(FCN(num_classes)).to(self.device)
+			# raise ValueError("Not implement {}".format(model))
 		self.opt_method = opt_method
-		self.train_dst = CityScapesDataset(train_path)
+		self.train_dst = CityScapesDataset(train_path, transforms=transform)
 		self.valid_dst = CityScapesDataset(valid_path)
 		self.test_dst = CityScapesDataset(test_path)
 
@@ -105,7 +105,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	train = Train(model = )
+	train = Train(model = FCN)
 	# x = torch.randn(2, 3, 1024, 1024)
 	# y =	torch.empty(2, 1024, 1024, dtype=torch.long).random_(32)
 	# #train.train_loader = [(x, y, y)]
