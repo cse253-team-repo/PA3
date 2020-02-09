@@ -1,4 +1,4 @@
-model: "base_fc"
+model: "UNet"
 loss_method: "cross-entropy"
 opt_method: "Adam"
 batch_size: 28

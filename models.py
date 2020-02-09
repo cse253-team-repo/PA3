@@ -20,7 +20,7 @@ class Loss:
 class UNet(nn.Module):
 	def __init__(self, num_classes):
 		super(UNet, self).__init__()
-		k = 4 # scaling factor of the network size
+		k = 1 # scaling factor of the network size
 		self.layer1 = nn.Sequential(nn.Conv2d(3, 64//k, 3, padding=1), nn.ReLU(),
 									nn.Conv2d(64//k, 64//k, 3, padding=1), nn.ReLU()
 									)

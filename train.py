@@ -8,6 +8,7 @@ import torch.optim as optim
 import time
 from utils import *
 from utils import load_config
+from torch.utils.tensorboard import SummaryWriter
 import yaml
 # from tqdm import tqdm
 
@@ -20,7 +21,7 @@ class Train:
 				 test_path = "./test.csv",
 				 train_path = "./train.csv",
 				 valid_path = "./val.csv",
-				 save_path = "my_model.pt"
+				 save_path = "my_model_Unet.pt"
 				):
 		self.save_path = save_path
 		self.batch_size = config["batch_size"]
@@ -39,6 +40,7 @@ class Train:
 
 		else:
 			self.gpus =[]
+		self.record = SummaryWriter('runs/unet{}'.format(time.time()))
 		self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
 		self.num_gpus = len(self.gpus)
 
@@ -74,14 +76,14 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,
-									   num_workers=4)
+									   num_workers=1)
 		self.valid_loader = DataLoader(self.valid_dst,
-									   batch_size=2,
-									   shuffle=True, num_workers=4)
+									   batch_size=4,
+									   shuffle=True, num_workers=1)
 		self.test_loader = DataLoader(self.test_dst,
-									  batch_size=2,
+									  batch_size=4,
 									  shuffle=True,
-									  num_workers=4)
+									  num_workers=1)
 		if self.retrain == True:
 			self.load_weights(self.save_path)
 
@@ -118,17 +120,19 @@ class Train:
 				loss.backward()
 				optimizer.step()
 				loss_itr.append(loss.item())
+				self.record.add_scalar("Train_loss",loss.item(),i+epoch*len(self.train_loader))
 				itr_end = time.time()
 				if verbose:
 					print("Iterations: {} \t training loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
 			loss_epoch.append(np.mean(loss_itr))
 			print("*"*10)
-			print("Epoch: {} \t training loss: {}".format(epoch, np.mean(loss_epoch)))
+			print("Epoch: {} \t training loss: {}".format(epoch, loss_epoch[-1]))
 			if lr_decay:
 				lr_sheduler.step(epoch)
 
 			valid_acc, valid_loss = self.check_accuracy(self.valid_loader, get_loss=True)
 			print("Epoch: {} \t valid loss: {} \t valid accuracy: {}".format(epoch, valid_loss, valid_acc))
+			self.record.add_scalar("Validation Acc", valid_acc.item(), epoch)
 			if self.save_best:
 				if valid_acc > MAX:
 					self.save_weights(self.save_path)
