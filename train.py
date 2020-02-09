@@ -36,7 +36,7 @@ class Train:
 		img_shape = tuple(config["img_shape"])
 		model = config["model"]
 		if GPU:
-			self.gpus = [ix for ix in CUDA_DIX]
+			self.gpus = [*CUDA_DIX]
 		else:
 			self.gpus =[]
 		self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
