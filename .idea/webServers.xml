@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="ca5b5b7f-f823-4eb1-8ccb-7f33ea0d57d9" name="node" url="http://dsmlp-login.ucsd.edu">
+        <fileTransfer host="dsmlp-login.ucsd.edu" port="22" rootFolder="/dsmlp/datasets/home/home-01/42/542/x3yang" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
