@@ -1,4 +1,5 @@
 import torch
+import yaml
 def iou(pred, target):
     """
         Calculate IOU in a for each class; Assume data is one hot encoding
@@ -24,6 +25,11 @@ def iou(pred, target):
             ious.append(intersection/union)# Append the calculated IoU to the list ious
     
     return ious
+def load_config(path):
+    """
+    Load the configuration from config.yaml.
+    """
+    return yaml.load(open(path, 'r'), Loader=yaml.SafeLoader)
 
 
 def pixel_acc(y_hat, y):
