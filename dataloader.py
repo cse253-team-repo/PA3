@@ -101,7 +101,7 @@ class CityScapesDataset(Dataset):
         label = np.asarray(Image.open(label_name))
         # reduce mean
         img = img[:, :, ::-1]  # switch to BGR
-        img = np.transpose(img, (2, 0, 1))
+        # img = np.transpose(img, (2, 0, 1))
         #  / 255.
         # img[0] -= self.means[0]
         # img[1] -= self.means[1]
