@@ -1,4 +1,6 @@
 from models import UNet
+from models import Vgg11
+from models import IncepV3
 from basic_fcn import FCN
 import torch.nn as nn
 from dataloader import *
@@ -9,25 +11,19 @@ import time
 from utils import *
 from utils import load_config
 import yaml
+import torchvision
 # from tqdm import tqdm
 
 import pdb
 
 CUDA_DIX = [0,1,2,3]
 class Train:
-<<<<<<< HEAD
-	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv", 
-					transform='resize', model="UNet", loss_method="cross-entropy", opt_method ="Adam",
-					batch_size=12, img_shape=(512,512), epochs=1000, num_classes=34, lr=0.01, 
-					GPU=True
-=======
 	def __init__(self,
 				 config,
 				 test_path = "./test.csv",
 				 train_path = "./train.csv",
 				 valid_path = "./val.csv",
 				 save_path = "my_model.pt"
->>>>>>> refs/remotes/origin/master
 				):
 		self.save_path = save_path
 		self.batch_size = config["batch_size"]
@@ -50,13 +46,17 @@ class Train:
 		self.num_gpus = len(self.gpus)
 
 		networks = {"UNet":UNet,
-					"base_fc":FCN}
+					"base_fc":FCN,
+					"incep":IncepV3,
+					"vgg11":Vgg11}
+		
+		if model == "UNet" or model == "base_fc":
+			self.model = networks[model](self.num_classes).to(self.device)
+		else:
+			self.model = networks[model](self.num_classes, self.retrain).to(self.device)
 
-		self.model = networks[model](self.num_classes).to(self.device)
-
-
-		if self.num_gpus > 1:
-			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
+		# if self.num_gpus > 1:
+		# 	self.model = nn.DataParallel(self.model, device_ids=self.gpus)
 
 		transform = transforms.Compose([
 			RandomResizedCrop(img_shape),
@@ -96,12 +96,8 @@ class Train:
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
 
-<<<<<<< HEAD
-	def train_on_batch(self, verbose=False):
-=======
 	def train_on_batch(self, verbose=True, lr_decay=True):
 
->>>>>>> refs/remotes/origin/master
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 			if lr_decay:
@@ -123,6 +119,7 @@ class Train:
 
 				optimizer.zero_grad()
 				output = self.model(img)
+				print("output shape: ", output.shape)
 				# print(train_y_one_hot.shape,output.shape)
 				loss = criterio(output, train_y)
 
