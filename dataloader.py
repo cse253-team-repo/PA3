@@ -79,6 +79,8 @@ labels_classes = [
     Label(  'bicycle'              , 33 ,       18 , 'vehicle'         , 7       , True         , False        , (119, 11, 32) )
 ]
 
+
+
 class CityScapesDataset(Dataset):
 
     def __init__(self, csv_file, n_class=n_class, transforms=None):
@@ -91,6 +93,66 @@ class CityScapesDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+    def transform_func(self, img, label):
+        h, w = np.array(img).shape[0], np.array(img).shape[1]
+        ratio = 0.5
+
+        if self.transform == 'center':
+            transform = transforms.Compose([
+                transforms.ToPILImage(),
+                transforms.CenterCrop((ratio*h,ratio*w)),
+                ])
+
+            img = np.array(transform(img)).transpose(2,0,1)
+            label = np.array(transform(label))
+            # reduce mean
+            img = img / 255.
+            img[0] = img[0] - np.mean(img[0])
+            img[1] = img[1] - np.mean(img[1])
+            img[2] = img[2] - np.mean(img[2])
+
+            return img, label
+
+        elif self.transform == 'resize':
+            transform = transforms.Compose([
+                transforms.ToPILImage(),
+                transforms.Resize((ratio*h,ratio*w)),
+                ])
+            
+            img = np.array(transform(img)).transpose(2,0,1)
+            label = np.array(transform(label))
+            # reduce mean
+            img = img / 255.
+            img[0] = img[0] - np.mean(img[0])
+            img[1] = img[1] - np.mean(img[1])
+            img[2] = img[2] - np.mean(img[2])
+
+            return img, label
+
+        elif self.transform == 'randomcrop':
+            transform = transforms.Compose([
+                transforms.ToPILImage()
+                ])
+            img = transform(img)
+            label = transform(label)
+
+            i, j, h, w = transforms.RandomCrop.get_params(
+            img, output_size=(ratio*h, ratio*w))
+            img = transforms.functional.crop(img, i, j, h, w)
+            label = transforms.functional.crop(label, i, j, h, w)
+
+            img = np.array(img).transpose(2,0,1)
+            label = np.array(label)
+
+            # reduce mean
+            img = img / 255.
+            img[0] = img[0] - np.mean(img[0])
+            img[1] = img[1] - np.mean(img[1])
+            img[2] = img[2] - np.mean(img[2])
+
+            return img, label
+
+
     def __getitem__(self, idx):
         img_name   = self.data.iloc[idx, 0]
 
@@ -99,24 +161,12 @@ class CityScapesDataset(Dataset):
 
         label_name = self.data.iloc[idx, 1]
         label = np.asarray(Image.open(label_name))
-        # reduce mean
+
         img = img[:, :, ::-1]  # switch to BGR
-        # img = np.transpose(img, (2, 0, 1))
-        #  / 255.
-        # img[0] -= self.means[0]
-        # img[1] -= self.means[1]
-        # img[2] -= self.means[2]
-
-        # img = img * 255
         img = img.astype(np.uint8)
-        img = np.array(self.transform(img)).transpose(2,0,1)
-        # reduce mean
-        img = img / 255.
-        img[0] = img[0] - np.mean(img[0])
-        img[1] = img[1] - np.mean(img[1])
-        img[2] = img[2] - np.mean(img[2])
 
-        label = np.array(self.transform(label))
+        img,label = self.transform_func(img, label)
+
 
         # convert to tensor
         img = torch.from_numpy(img.copy()).float()
@@ -132,21 +182,7 @@ class CityScapesDataset(Dataset):
         return img, target, label
 
 if __name__ == "__main__":
-    # hard coding
-    h,w = 1024, 2048
-
-    crop_method = 'resize'
-    
-    if crop_method == 'center':
-        transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.CenterCrop((h//2,w//2)),
-            ])
-    elif crop_method == 'resize':
-        transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize((h//2,w//2)),
-            ])
+    transform = 'randomcrop'
 
     trainset = CityScapesDataset("train.csv", transforms=transform)
     
