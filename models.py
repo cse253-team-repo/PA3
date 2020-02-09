@@ -98,6 +98,10 @@ class UNet(nn.Module):
 		w1 = int(ww1/2-ww2/2)
 		w2 = ww2 + w1
 		return h1, h2, w1, w2
+	def save_weights(self,path):
+
+	def load_weights(self,path):
+		
 
 
 
