@@ -1,6 +1,6 @@
 from models import UNet
 from basic_fcn import FCN
-import torch
+from utils import *
 import torch.nn as nn
 from dataloader import *
 from torch.utils.data import DataLoader
@@ -12,13 +12,13 @@ import torch.functional as F
 
 import pdb
 
-CUDA_DIX = [0,1]
+CUDA_DIX = [0,1,2,3]
 class Train:
 	def __init__(self,
 				 test_path="./test.csv",
 				 train_path = "./train.csv",
 				 valid_path = "./val.csv",
-				 model="UNet",
+				 model="base_fc",
 				 loss_method="cross-entropy",
 				 opt_method ="Adam",
 				 batch_size=32,
@@ -118,6 +118,8 @@ class Train:
 			print("Epoch: {} \t loss: {}".format(epoch, loss_epoch[-1]))
 			if lr_decay:
 				lr_sheduler.step(epoch)
+			pix_acc = self.check_accuracy( self.valid_loader, get_loss=True)
+			print("Pixel Accracy {}".format(pix_acc))
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
