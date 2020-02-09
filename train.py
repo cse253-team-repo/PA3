@@ -13,7 +13,7 @@ import pdb
 class Train:
 	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv", 
 					transform='resize', model="UNet", loss_method="cross-entropy", opt_method ="Adam",
-					batch_size=1, img_shape=(512,512), epochs=1000, num_classes=34, lr=0.01, 
+					batch_size=12, img_shape=(512,512), epochs=1000, num_classes=34, lr=0.01, 
 					GPU=True
 				):
 		self.batch_size = batch_size
@@ -44,7 +44,7 @@ class Train:
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
 
-	def train_on_batch(self, verbose=True):
+	def train_on_batch(self, verbose=False):
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 		if self.loss_method == "cross-entropy":
