@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import torch
 import pandas as pd
+import torch.functional as F
 from collections import namedtuple
 
 n_class    = 34
@@ -108,6 +109,23 @@ class ToTensor(object):
         label = np.array(label)
         return self.transform(img), \
                torch.from_numpy(label.copy()).long()
+
+class RandomResizedCrop(object):
+    def __init__(self,size,
+                 scale=(0.8, 1.2),
+                 ratio=(3. / 4., 4. / 3.)):
+        self.scale = scale
+        self.radio = ratio
+        self.size = size
+
+    def __call__(self, sample):
+        img, label = sample
+        i, j, h, w = transforms.RandomResizedCrop.get_params(
+            img, self.scale,self.radio)
+
+        img = transforms.functional.resized_crop(img, i, j, h, w, self.size)
+        label = transforms.functional.resized_crop(label, i, j, h, w, self.size)
+        return img,label
 
 class RandomCrop(object):
     def __init__(self,output_size):
