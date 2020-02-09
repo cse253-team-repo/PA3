@@ -80,11 +80,12 @@ class Train:
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
 
-	def train_on_batch(self, verbose=True):
+	def train_on_batch(self, verbose=True, lr_decay=True):
 
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
-			lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+			if lr_decay:
+				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss().to(self.device)
 		loss_epoch = []
@@ -113,8 +114,29 @@ class Train:
 			loss_epoch.append(np.mean(loss_itr))
 			print("*"*10)
 			print("Epoch: {} \t loss: {}".format(epoch, loss_epoch[-1]))
-			lr_sheduler.step(epoch)
+			if lr_decay:
+				lr_sheduler.step(epoch)
 
+	def check_accuracy(self, dataloader, get_loss=True):
+		accs = []
+		losses = []
+		if self.loss_method == "cross-entropy":
+			criterio = nn.CrossEntropyLoss()
+		with torch.no_grad():
+			for i, data in enumerate(dataloader):
+				x, y_one_hot, y = data
+				x = x.to(self.device)
+				y_one_hot = y_one_hot.to(self.device)
+				y = y.to(self.device)
+				out = self.model(x)
+				loss = criterio(out, y)
+				losses.append(loss.numpy())
+				y_hat = torch.argmax(out,dim=1)
+				acc = pixel_acc(y_hat, y)
+				accs.append(acc)
+		if get_loss:
+			return np.mean(accs), np.mean(losses)
+		return np.mean(accs)
 
 
 if __name__ == "__main__":
