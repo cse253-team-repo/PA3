@@ -76,7 +76,6 @@ class FCN(nn.Module):
         y = self.deconv4(y)
         out_decoder = self.deconv5(y)
 
-        score = self.classifier(out_decoder)                   
-        print("score shape: ", score.shape)
+        score = self.classifier(out_decoder)
         
         return score  # size=(N, n_class, x.H/1, x.W/1)

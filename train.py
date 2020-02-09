@@ -24,7 +24,7 @@ class Train:
 				 img_shape=(512,512),
 				 epochs=1000,
 				 num_classes=34,
-				 lr=0.01,
+				 lr=0.1,
 				 GPU=True
 				):
 		self.batch_size = batch_size
@@ -84,6 +84,7 @@ class Train:
 
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+			lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss().to(self.device)
 		loss_epoch = []
@@ -112,6 +113,7 @@ class Train:
 			loss_epoch.append(np.mean(loss_itr))
 			print("*"*10)
 			print("Epoch: {} \t loss: {}".format(epoch, loss_epoch[-1]))
+			lr_sheduler.step(epoch)
 
 
 
