@@ -24,7 +24,7 @@ class Train:
 				 img_shape=(512,512),
 				 epochs=1000,
 				 num_classes=34,
-				 lr=0.1,
+				 lr=0.01,
 				 GPU=True
 				):
 		self.batch_size = batch_size
