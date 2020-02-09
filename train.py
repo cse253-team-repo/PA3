@@ -1,20 +1,19 @@
 from models import UNet
 from basic_fcn import FCN
-import torch
 import torch.nn as nn
 from dataloader import *
 from torch.utils.data import DataLoader
 import numpy as np
 import torch.optim as optim
 import time
-import torch.functional as F
+from utils import *
 from utils import load_config
 import yaml
 # from tqdm import tqdm
 
 import pdb
 
-CUDA_DIX = [0,1]
+CUDA_DIX = [0,1,2,3]
 class Train:
 	def __init__(self,
 				 config,
@@ -36,7 +35,7 @@ class Train:
 		img_shape = tuple(config["img_shape"])
 		model = config["model"]
 		if GPU:
-			self.gpus = [ix for ix in CUDA_DIX]
+			self.gpus = CUDA_DIX
 		else:
 			self.gpus =[]
 		self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
@@ -52,14 +51,19 @@ class Train:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
 
 		transform = transforms.Compose([
-			RandomCrop(img_shape),
+			RandomResizedCrop(img_shape),
+			ToTensor(),
+			Normalize(mean=[0.485, 0.456, 0.406],
+					  std=[0.229, 0.224, 0.225])
+		])
+		test_transform = transforms.Compose([
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
 					  std=[0.229, 0.224, 0.225])
 		])
 		self.train_dst = CityScapesDataset(train_path,transforms=transform)
-		self.valid_dst = CityScapesDataset(valid_path,transforms=transform)
-		self.test_dst = CityScapesDataset(test_path,transforms=transform)
+		self.valid_dst = CityScapesDataset(valid_path,transforms=test_transform)
+		self.test_dst = CityScapesDataset(test_path,transforms=test_transform)
 		print("Train set {}\n"
 			  "Validation set {}\n"
 			  "Test set {}".format(
@@ -71,13 +75,13 @@ class Train:
 									   shuffle=True,
 									   num_workers=4)
 		self.valid_loader = DataLoader(self.valid_dst,
-									   batch_size=self.batch_size,
+									   batch_size=2,
 									   shuffle=True, num_workers=4)
 		self.test_loader = DataLoader(self.test_dst,
-									  batch_size=self.batch_size,
+									  batch_size=2,
 									  shuffle=True,
 									  num_workers=4)
-		if not self.retrain:
+		if self.retrain == True:
 			self.load_weights(self.save_path)
 
 		
@@ -118,7 +122,7 @@ class Train:
 					print("Iterations: {} \t training loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
 			loss_epoch.append(np.mean(loss_itr))
 			print("*"*10)
-			print("Epoch: {} \t training loss: {}".format(epoch, loss_epoch[-1]))
+			print("Epoch: {} \t training loss: {}".format(epoch, np.mean(loss_epoch)))
 			if lr_decay:
 				lr_sheduler.step(epoch)
 
