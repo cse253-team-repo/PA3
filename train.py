@@ -22,11 +22,11 @@ class Train:
 				 model="UNet",
 				 loss_method = "cross-entropy",
 				 opt_method ="Adam",
-				 batch_size = 32,
+				 batch_size = 24,
 				 img_shape = (512,512),
 				 epochs = 1000,
 				 num_classes=  34,
-				 lr = 0.01,
+				 lr = 0.1,
 				 GPU = True,
 				 save_best = True,
 				 save_path = "my_model.pt"
