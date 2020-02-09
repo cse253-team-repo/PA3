@@ -1,6 +1,6 @@
 import torch
 import yaml
-import pdb
+import time
 def iou(pred, target):
     """
         Calculate IOU in a for each class; Assume data is one hot encoding
@@ -35,6 +35,7 @@ def iou2(pred, target):
         Returns:
             ious: list of iou for each class
     """
+
     intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
     union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
     ious = (intersection / union).tolist()
@@ -66,6 +67,11 @@ def pixel_acc(y_hat, y):
 if __name__ == "__main__":
     # test IOU
     # create pred
+    n_class = 8
+    h = w = 513
+    pred = torch.eye(n_class)[torch.randint(0, n_class, (h*w,))].view(h,w,8)
+    target = torch.eye(n_class)[torch.randint(0, n_class, (h*w,))].view(h,w,8)
+    """
     pred = torch.tensor([[[ 0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
          [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
          [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]],
@@ -78,9 +84,13 @@ if __name__ == "__main__":
         [[ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
          [ 0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.],
          [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.]]])
+    """
     pred = pred.unsqueeze(0)
     target = target.unsqueeze(0)
-    pdb.set_trace()
     print(iou(pred, target))
-    print(iou2(pred.permute(0, 3, 1, 2), target.permute(0, 3, 1, 2)))
+    start =time.time()
+    out = iou2(pred.permute(0, 3, 1, 2), target.permute(0, 3, 1, 2))
+    end = time.time()
+    print(out)
+    print("time: {}".format(end - start))
     #print(pixel_acc(pred, target))
