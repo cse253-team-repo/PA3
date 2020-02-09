@@ -1,4 +1,5 @@
 from models import UNet
+from basic_fcn import FCN
 import torch
 import torch.nn as nn
 from dataloader import *
@@ -41,10 +42,11 @@ class Train:
 		self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
 		self.num_gpus = len(self.gpus)
 
-		if model == "UNet":
-			self.model = UNet(num_classes).to(self.device)
-		else:
-			raise ValueError("Not implement {}".format(model))
+		networks = {"UNet":UNet,
+					"base_fc":FCN}
+
+		self.model = networks[model](num_classes).to(self.device)
+
 
 		if self.num_gpus > 1:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
