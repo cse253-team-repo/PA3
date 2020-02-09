@@ -1,21 +1,30 @@
 from models import UNet
 import torch
 import torch.nn as nn
-from dataloader import CityScapesDataset
+from dataloader import *
 from torch.utils.data import DataLoader
 import numpy as np
 import torch.optim as optim
 import time
+# from tqdm import tqdm
+
 import pdb
 
-
-
-
+CUDA_DIX = [0,1]
 class Train:
-	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv",
-					model="UNet", loss_method="cross-entropy", opt_method ="Adam",
-					batch_size=1, img_shape=(512,512), epochs=1000, num_classes=32, lr=0.01, 
-					GPU=True
+	def __init__(self,
+				 test_path="./test.csv",
+				 train_path = "./train.csv",
+				 valid_path = "./val.csv",
+				 model="UNet",
+				 loss_method="cross-entropy",
+				 opt_method ="Adam",
+				 batch_size=64,
+				 img_shape=(512,512),
+				 epochs=1000,
+				 num_classes=34,
+				 lr=0.01,
+				 GPU=True
 				):
 		self.batch_size = batch_size
 		self.epochs = epochs
@@ -23,46 +32,76 @@ class Train:
 		self.lr = lr
 		self.opt_method = opt_method
 		self.loss_method = loss_method
+
 		if GPU:
-			self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+			self.gpus = [ix for ix in CUDA_DIX]
 		else:
-			self.device = torch.device("cpu")
+			self.gpus =[]
+		self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
+		self.num_gpus = len(self.gpus)
 
 		if model == "UNet":
 			self.model = UNet(num_classes).to(self.device)
 		else:
 			raise ValueError("Not implement {}".format(model))
-		self.opt_method = opt_method
-		self.train_dst = CityScapesDataset(train_path)
-		self.valid_dst = CityScapesDataset(valid_path)
-		self.test_dst = CityScapesDataset(test_path)
 
-		self.train_loader = DataLoader(self.train_dst, batch_size=batch_size, shuffle=True, num_workers=8)
-		self.valid_loader = DataLoader(self.valid_dst, batch_size=batch_size, shuffle=True, num_workers=8)
-		self.test_loader = DataLoader(self.test_dst, batch_size=batch_size, shuffle=True, num_workers=8)
+		if self.num_gpus > 1:
+			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
+
+		self.opt_method = opt_method
+		transform = transforms.Compose([
+			RandomCrop(img_shape),
+			ToTensor(),
+			Normalize(mean=[0.485, 0.456, 0.406],
+					  std=[0.229, 0.224, 0.225])
+		])
+		self.train_dst = CityScapesDataset(train_path,transforms=transform)
+		self.valid_dst = CityScapesDataset(valid_path,transforms=transform)
+		self.test_dst = CityScapesDataset(test_path,transforms=transform)
+		print("Train set {}\n"
+			  "Validation set {}\n"
+			  "Test set {}".format(
+			len(self.train_dst),
+			len(self.valid_dst),
+			len(self.test_dst)))
+		self.train_loader = DataLoader(self.train_dst,
+									   batch_size=batch_size,
+									   shuffle=True,
+									   num_workers=8)
+		self.valid_loader = DataLoader(self.valid_dst,
+									   batch_size=batch_size,
+									   shuffle=True, num_workers=8)
+		self.test_loader = DataLoader(self.test_dst,
+									  batch_size=batch_size,
+									  shuffle=True,
+									  num_workers=8)
 		
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
 
-	def train_on_batch(self, verbose=True):
+	def train_on_batch(self, verbose=False):
+
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss()
 		loss_epoch = []
+
 		for epoch in range(self.epochs):
+			print(len(self.train_loader))
 			loss_itr = []
-			for i, data in enumerate(self.train_loader):
+			for i, (img, target, label) in enumerate(self.train_loader):
 				itr_start = time.time()
-				optimizer.zero_grad()
-				train_x, train_y_one_hot, train_y = data
 				#print(train_x.shape)
 				#pdb.set_trace()
-				train_x = train_x.to(self.device)
-				train_y_one_hot = train_y_one_hot.to(self.device)
-				train_y = train_y.to(self.device)
+				train_x = img.to(self.device)
+				train_y_one_hot = target.to(self.device)
+				train_y = label.to(self.device)
+
+				optimizer.zero_grad()
 				output = self.model(train_x)
-				loss = criterio(output, train_y)
+				loss = criterio(output, train_y_one_hot)
+
 				loss.backward()
 				optimizer.step()
 				loss = loss.cpu().detach().numpy()
@@ -76,16 +115,8 @@ class Train:
 
 
 
-
-
-
-
-
 if __name__ == "__main__":
 	train = Train()
-	x = torch.randn(1, 3, 512, 512)
-	y =	torch.empty(1, 512, 512, dtype=torch.long).random_(32)
-	train.train_loader = [(x, y, y)]
 	train.train_on_batch()
 
 

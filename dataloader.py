@@ -106,7 +106,8 @@ class ToTensor(object):
     def __call__(self, sample):
         img, label = sample
         label = np.array(label)
-        return self.transform(img), torch.from_numpy(label.copy()).long()
+        return self.transform(img), \
+               torch.from_numpy(label.copy()).long()
 
 class RandomCrop(object):
     def __init__(self,output_size):
