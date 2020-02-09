@@ -1,85 +1,150 @@
 from models import UNet
 from basic_fcn import FCN
-from dataloader import CityScapesDataset
-from torch.utils.data import DataLoader
-from utils import pixel_acc
-import torch
 import torch.nn as nn
+from dataloader import *
+from torch.utils.data import DataLoader
 import numpy as np
 import torch.optim as optim
 import time
+from utils import *
+from utils import load_config
+import yaml
+# from tqdm import tqdm
+
 import pdb
 
+CUDA_DIX = [0,1,2,3]
 class Train:
+<<<<<<< HEAD
 	def __init__(self, test_path="./test.csv", train_path = "./train.csv", valid_path = "./val.csv", 
 					transform='resize', model="UNet", loss_method="cross-entropy", opt_method ="Adam",
 					batch_size=12, img_shape=(512,512), epochs=1000, num_classes=34, lr=0.01, 
 					GPU=True
+=======
+	def __init__(self,
+				 config,
+				 test_path = "./test.csv",
+				 train_path = "./train.csv",
+				 valid_path = "./val.csv",
+				 save_path = "my_model.pt"
+>>>>>>> refs/remotes/origin/master
 				):
-		self.batch_size = batch_size
-		self.epochs = epochs
-		self.num_classes = num_classes
-		self.lr = lr
-		self.opt_method = opt_method
-		self.loss_method = loss_method
+		self.save_path = save_path
+		self.batch_size = config["batch_size"]
+		self.epochs = config["epochs"]
+		self.num_classes = config["num_classes"]
+		self.lr = config["lr"]
+		self.opt_method = config["opt_method"]
+		self.loss_method = config["loss_method"]
+		self.save_best = config["save_best"]
+		self.retrain = config["retrain"]
+		GPU = config["GPU"]
+		img_shape = tuple(config["img_shape"])
+		model = config["model"]
 		if GPU:
-			self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-		else:
-			self.device = torch.device("cpu")
+			self.gpus = CUDA_DIX
 
-		if model == "UNet":
-			self.model = nn.DataParallel(UNet(num_classes)).to(self.device)
 		else:
-			self.model = nn.DataParallel(FCN(num_classes)).to(self.device)
-			# raise ValueError("Not implement {}".format(model))
-		self.opt_method = opt_method
-		self.train_dst = CityScapesDataset(train_path, transforms=transform)
-		self.valid_dst = CityScapesDataset(valid_path)
-		self.test_dst = CityScapesDataset(test_path)
+			self.gpus =[]
+		self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
+		self.num_gpus = len(self.gpus)
 
-		self.train_loader = DataLoader(self.train_dst, batch_size=batch_size, shuffle=True, num_workers=4)
-		self.valid_loader = DataLoader(self.valid_dst, batch_size=batch_size, shuffle=True, num_workers=4)
-		self.test_loader = DataLoader(self.test_dst, batch_size=batch_size, shuffle=True, num_workers=4)
-		
+		networks = {"UNet":UNet,
+					"base_fc":FCN}
+
+		self.model = networks[model](self.num_classes).to(self.device)
+
+
+		if self.num_gpus > 1:
+			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
+
+		transform = transforms.Compose([
+			RandomResizedCrop(img_shape),
+			ToTensor(),
+			Normalize(mean=[0.485, 0.456, 0.406],
+					  std=[0.229, 0.224, 0.225])
+		])
+		test_transform = transforms.Compose([
+			ToTensor(),
+			Normalize(mean=[0.485, 0.456, 0.406],
+					  std=[0.229, 0.224, 0.225])
+		])
+		self.train_dst = CityScapesDataset(train_path,transforms=transform)
+		self.valid_dst = CityScapesDataset(valid_path,transforms=test_transform)
+		self.test_dst = CityScapesDataset(test_path,transforms=test_transform)
+		print("Train set {}\n"
+			  "Validation set {}\n"
+			  "Test set {}".format(
+			len(self.train_dst),
+			len(self.valid_dst),
+			len(self.test_dst)))
+		self.train_loader = DataLoader(self.train_dst,
+									   batch_size=self.batch_size,
+									   shuffle=True,
+									   num_workers=4)
+		self.valid_loader = DataLoader(self.valid_dst,
+									   batch_size=2,
+									   shuffle=True, num_workers=4)
+		self.test_loader = DataLoader(self.test_dst,
+									  batch_size=2,
+									  shuffle=True,
+									  num_workers=4)
+		if self.retrain == True:
+			self.load_weights(self.save_path)
+
+
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
 
+<<<<<<< HEAD
 	def train_on_batch(self, verbose=False):
+=======
+	def train_on_batch(self, verbose=True, lr_decay=True):
+
+>>>>>>> refs/remotes/origin/master
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+			if lr_decay:
+				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss()
-		train_loss_epoch = []
-		valid_loss_epoch = []
+			criterio = nn.CrossEntropyLoss().to(self.device)
+		loss_epoch = []
+		valid_accs = []
+		MAX = 0
 		for epoch in range(self.epochs):
 			loss_itr = []
-			for i, data in enumerate(self.train_loader):
+			for i, (img, target, label) in enumerate(self.train_loader):
 				itr_start = time.time()
-				optimizer.zero_grad()
-				train_x, train_y_one_hot, train_y = data
 				#print(train_x.shape)
 				#pdb.set_trace()
-				train_x = train_x.to(self.device)
-				train_y_one_hot = train_y_one_hot.to(self.device)
-				train_y = train_y.to(self.device)
-				#pdb.set_trace()
-				output = self.model(train_x)
+				img = img.to(self.device)
+				train_y_one_hot = target.to(self.device)
+				train_y = label.to(self.device)
+
+				optimizer.zero_grad()
+				output = self.model(img)
+				# print(train_y_one_hot.shape,output.shape)
 				loss = criterio(output, train_y)
+
 				loss.backward()
 				optimizer.step()
-				loss = loss.cpu().detach().numpy()
-				loss_itr.append(loss)
+				loss_itr.append(loss.item())
 				itr_end = time.time()
 				if verbose:
-					print("Iterations: {} \t loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
-			
-
-			valid_acc, valid_loss = self.check_accuracy(self.valid_loader)
-			print("Epoch: {} \t validation accs: {} \t loss: {}".format(epoch, valid_acc, valid_loss))
-
+					print("Iterations: {} \t training loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
 			loss_epoch.append(np.mean(loss_itr))
 			print("*"*10)
-			print("Epoch: {} \t loss: {}".format(epoch, loss_epoch[-1]))
+			print("Epoch: {} \t training loss: {}".format(epoch, np.mean(loss_epoch)))
+			if lr_decay:
+				lr_sheduler.step(epoch)
+
+			valid_acc, valid_loss = self.check_accuracy(self.valid_loader, get_loss=True)
+			print("Epoch: {} \t valid loss: {} \t valid accuracy: {}".format(epoch, valid_loss, valid_acc))
+			if self.save_best:
+				if valid_acc > MAX:
+					self.save_weights(self.save_path)
+					MAX = valid_acc
+			valid_accs.append(valid_acc)
 
 
 	def check_accuracy(self, dataloader, get_loss=True):
@@ -95,7 +160,7 @@ class Train:
 				y = y.to(self.device)
 				out = self.model(x)
 				loss = criterio(out, y)
-				losses.append(loss.numpy())
+				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out,dim=1)
 				acc = pixel_acc(y_hat, y)
 				accs.append(acc)
@@ -103,12 +168,21 @@ class Train:
 			return np.mean(accs), np.mean(losses)
 		return np.mean(accs)
 
+	def save_weights(self,path):
+		print("Saving the model ...")
+		torch.save(self.model.state_dict(), path)
+		print("Saving Done!")
+
+	def load_weights(self,path):
+		print("Loading the parameters")
+		self.model.load_state_dict(torch.load(path))
+		self.model.eval()
+
+
 
 if __name__ == "__main__":
-	train = Train(model = FCN)
-	# x = torch.randn(2, 3, 1024, 1024)
-	# y =	torch.empty(2, 1024, 1024, dtype=torch.long).random_(32)
-	# #train.train_loader = [(x, y, y)]
+	config = load_config("Unet_config.yaml")
+	train = Train(config)
 	train.train_on_batch()
 
 

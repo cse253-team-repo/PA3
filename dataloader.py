@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import torch
 import pandas as pd
+import torch.functional as F
 from collections import namedtuple
 
 n_class    = 34
@@ -79,7 +80,65 @@ labels_classes = [
     Label(  'bicycle'              , 33 ,       18 , 'vehicle'         , 7       , True         , False        , (119, 11, 32) )
 ]
 
+class CenterCrop(object):
+    def __init__(self,arg):
+        self.transform = transforms.CenterCrop(arg)
+    def __call__(self, sample):
+        img, label = sample
+        return self.transform(img),self.transform(label)
 
+class Resize(object):
+    def __init__(self,arg):
+        self.transform = transforms.Resize(arg)
+    def __call__(self, sample):
+        img, label = sample
+        return self.transform(img),self.transform(label)
+
+class Normalize(object):
+    def __init__(self,mean,std):
+        self.transform = transforms.Normalize(mean, std)
+    def __call__(self, sample):
+        img, label = sample
+        return self.transform(img),label
+
+class ToTensor(object):
+    def __init__(self):
+        self.transform = transforms.ToTensor()
+    def __call__(self, sample):
+        img, label = sample
+        label = np.array(label)
+        return self.transform(img), \
+               torch.from_numpy(label.copy()).long()
+
+class RandomResizedCrop(object):
+    def __init__(self,size,
+                 scale=(0.8, 1.2),
+                 ratio=(3. / 4., 4. / 3.)):
+        self.scale = scale
+        self.radio = ratio
+        self.size = size
+
+    def __call__(self, sample):
+        img, label = sample
+        i, j, h, w = transforms.RandomResizedCrop.get_params(
+            img, self.scale,self.radio)
+
+        img = transforms.functional.resized_crop(img, i, j, h, w, self.size)
+        label = transforms.functional.resized_crop(label, i, j, h, w, self.size)
+        return img,label
+
+class RandomCrop(object):
+    def __init__(self,output_size):
+        self.output_size = output_size
+    def __call__(self, sample):
+        img, label = sample
+
+        i, j, h, w = transforms.RandomCrop.get_params(
+            img, output_size=self.output_size)
+
+        img = transforms.functional.crop(img, i, j, h, w)
+        label = transforms.functional.crop(label, i, j, h, w)
+        return img,label
 
 class CityScapesDataset(Dataset):
 
@@ -94,89 +153,19 @@ class CityScapesDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
-
-    def transform_func(self, img, label):
-        h, w = np.array(img).shape[0], np.array(img).shape[1]
-        ratio = 0.5
-
-        if self.transform == 'center':
-            transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.CenterCrop((ratio*h,ratio*w)),
-                ])
-
-            img = np.array(transform(img)).transpose(2,0,1)
-            label = np.array(transform(label))
-            # reduce mean
-            img = img / 255.
-            img[0] = img[0] - np.mean(img[0])
-            img[1] = img[1] - np.mean(img[1])
-            img[2] = img[2] - np.mean(img[2])
-
-            return img, label
-
-        elif self.transform == 'resize':
-            transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.Resize((int(ratio*h),int(ratio*w))),
-                ])
-            
-            img = np.array(transform(img)).transpose(2,0,1)
-            label = np.array(transform(label))
-            # reduce mean
-            img = img / 255.
-            img[0] = img[0] - np.mean(img[0])
-            img[1] = img[1] - np.mean(img[1])
-            img[2] = img[2] - np.mean(img[2])
-
-            return img, label
-
-        elif self.transform == 'randomcrop':
-            transform = transforms.Compose([
-                transforms.ToPILImage()
-                ])
-            img = transform(img)
-            label = transform(label)
-
-            i, j, h, w = transforms.RandomCrop.get_params(
-            img, output_size=(ratio*h, ratio*w))
-            img = transforms.functional.crop(img, i, j, h, w)
-            label = transforms.functional.crop(label, i, j, h, w)
-
-            img = np.array(img).transpose(2,0,1)
-            label = np.array(label)
-
-            # reduce mean
-            img = img / 255.
-            img[0] = img[0] - np.mean(img[0])
-            img[1] = img[1] - np.mean(img[1])
-            img[2] = img[2] - np.mean(img[2])
-
-            return img, label
-
-
     def __getitem__(self, idx):
         img_name   = self.data.iloc[idx, 0]
-
-        img = np.asarray(Image.open(img_name).convert('RGB'))
-        img = np.array(img)
+        img = Image.open(img_name)
 
         label_name = self.data.iloc[idx, 1]
-        label = np.asarray(Image.open(label_name))
+        label = Image.open(label_name)
 
-        img = img[:, :, ::-1]  # switch to BGR
-        img = img.astype(np.uint8)
-
-        img,label = self.transform_func(img, label)
-
-
-        # convert to tensor
-        img = torch.from_numpy(img.copy()).float()
-        label = torch.from_numpy(label.copy()).long()
+        if self.transform != None:
+            img,label = self.transform((img,label))
 
         # create one-hot encoding
         h, w = label.shape[0], label.shape[1]
-        target = torch.zeros(self.n_class, h, w)
+        target = torch.zeros(self.n_class, h, w).long()
 
         for c in range(self.n_class):
             target[c][label == c] = 1
@@ -184,7 +173,34 @@ class CityScapesDataset(Dataset):
         return img, target, label
 
 if __name__ == "__main__":
-    transform = 'center'
+
+    # hard coding
+    h,w = 1024, 2048
+
+    crop_method = 'random'
+
+    if crop_method == 'center':
+        transform = transforms.Compose([
+            CenterCrop((h//2,w//2)),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406],
+                      std=[0.229, 0.224, 0.225])
+            ])
+    elif crop_method == 'resize':
+        transform = transforms.Compose([
+            Resize((h//2,w//2)),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225])
+            ])
+    elif crop_method == 'random':
+        transform = transforms.Compose([
+            RandomCrop((h//2,w//2)),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406],
+                      std=[0.229, 0.224, 0.225])
+            ])
+
 
     trainset = CityScapesDataset("train.csv", transforms=transform)
     
