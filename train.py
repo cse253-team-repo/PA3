@@ -19,7 +19,7 @@ class Train:
 				 model="UNet",
 				 loss_method="cross-entropy",
 				 opt_method ="Adam",
-				 batch_size=64,
+				 batch_size=8,
 				 img_shape=(512,512),
 				 epochs=1000,
 				 num_classes=34,
@@ -67,19 +67,19 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=batch_size,
 									   shuffle=True,
-									   num_workers=8)
+									   num_workers=1)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=batch_size,
-									   shuffle=True, num_workers=8)
+									   shuffle=True, num_workers=1)
 		self.test_loader = DataLoader(self.test_dst,
 									  batch_size=batch_size,
 									  shuffle=True,
-									  num_workers=8)
+									  num_workers=1)
 		
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
 
-	def train_on_batch(self, verbose=False):
+	def train_on_batch(self, verbose=True):
 
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
@@ -88,7 +88,6 @@ class Train:
 		loss_epoch = []
 
 		for epoch in range(self.epochs):
-			print(len(self.train_loader))
 			loss_itr = []
 			for i, (img, target, label) in enumerate(self.train_loader):
 				itr_start = time.time()
