@@ -51,12 +51,12 @@ class FCN(nn.Module):
             nn.BatchNorm2d(64),
         ) 
 
-        self.deconv5 = nn.Seqential(
+        self.deconv5 = nn.Sequential(
             nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
             nn.BatchNorm2d(32),
         )
 
-        self.classifier = nn.Conv2d(32, 34, kernel_size=1)
+        self.classifier = nn.Conv2d(32, self.n_class, kernel_size=1)
 
     def forward(self, x):
         # x1 = __(self.relu(__(x)))
