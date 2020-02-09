@@ -20,7 +20,7 @@ class Train:
 				 model="UNet",
 				 loss_method="cross-entropy",
 				 opt_method ="Adam",
-				 batch_size=16,
+				 batch_size=32,
 				 img_shape=(512,512),
 				 epochs=1000,
 				 num_classes=34,
@@ -68,14 +68,14 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=batch_size,
 									   shuffle=True,
-									   num_workers=1)
+									   num_workers=4)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=batch_size,
-									   shuffle=True, num_workers=1)
+									   shuffle=True, num_workers=4)
 		self.test_loader = DataLoader(self.test_dst,
 									  batch_size=batch_size,
 									  shuffle=True,
-									  num_workers=1)
+									  num_workers=4)
 		
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
