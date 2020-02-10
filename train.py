@@ -79,14 +79,15 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,
-									   num_workers=2)
+									   num_workers=1)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True, num_workers=2)
+									   shuffle=True,
+									   num_workers=1)
 		self.test_loader = DataLoader(self.test_dst,
 									  batch_size=4,
 									  shuffle=True,
-									  num_workers=2)
+									  num_workers=1)
 		if self.retrain == True:
 			self.load_weights(self.save_path)
 
