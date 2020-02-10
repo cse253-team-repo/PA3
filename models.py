@@ -303,7 +303,6 @@ class FCN_backbone(nn.Module):
 
 	def forward(self, x):
 		x = self.encoder.forward(x)
-		print(x.shape)
 
 		x = self.deconv1(x)
 		x = self.deconv2(x)
