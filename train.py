@@ -21,7 +21,7 @@ class Train:
 				 test_path = "./test.csv",
 				 train_path = "./train.csv",
 				 valid_path = "./val.csv",
-				 save_path = "my_model_Unet.pt"
+				 save_path = "my_model_FCN_resnet50.pt"
 				):
 		self.save_path = save_path
 		self.batch_size = config["batch_size"]
@@ -79,14 +79,14 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,
-									   num_workers=1)
+									   num_workers=2)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True, num_workers=1)
+									   shuffle=True, num_workers=2)
 		self.test_loader = DataLoader(self.test_dst,
 									  batch_size=4,
 									  shuffle=True,
-									  num_workers=1)
+									  num_workers=2)
 		if self.retrain == True:
 			self.load_weights(self.save_path)
 
@@ -147,7 +147,7 @@ class Train:
 		accs = []
 		losses = []
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss()
+			criterio = nn.CrossEntropyLoss(ignore_index=-1)
 		with torch.no_grad():
 			for i, data in enumerate(dataloader):
 				x, y_one_hot, y = data

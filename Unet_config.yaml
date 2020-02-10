@@ -1,7 +1,7 @@
 model: "FCN"
 loss_method: "cross-entropy"
 opt_method: "Adam"
-batch_size: 16
+batch_size: 32
 img_shape: [512,512]
 epochs: 100
 num_classes: 19
