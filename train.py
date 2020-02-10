@@ -121,6 +121,7 @@ class Train:
 				output = self.model(img)
 				print("output shape: ", output.shape)
 				# print(train_y_one_hot.shape,output.shape)
+				visualize(output, label)
 				loss = criterio(output, train_y)
 
 				loss.backward()
@@ -174,7 +175,6 @@ class Train:
 		print("Loading the parameters")
 		self.model.load_state_dict(torch.load(path))
 		self.model.eval()
-
 
 
 if __name__ == "__main__":
