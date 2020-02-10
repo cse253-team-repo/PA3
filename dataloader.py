@@ -5,9 +5,10 @@ from PIL import Image
 import torch
 import pandas as pd
 import torch.functional as F
+from PIL import Image
 from collections import namedtuple
 
-n_class    = 34
+n_class    = 19
 means     = np.array([103.939, 116.779, 123.68]) / 255. # mean of three channels in the order of BGR
 
 # a label and all meta information
@@ -37,7 +38,7 @@ Label = namedtuple( 'Label' , [
     'hasInstances', # Whether this label distinguishes between single instances or not
 
     'ignoreInEval', # Whether pixels having this class as ground truth label are ignored
-                    # during evaluations or not
+                      # during evaluations or not
 
     'color'       , # The color of this label
     ] )
@@ -89,7 +90,7 @@ class CenterCrop(object):
 
 class Resize(object):
     def __init__(self,arg):
-        self.transform = transforms.Resize(arg)
+        self.transform = transforms.Resize(arg,Image.NEAREST)
     def __call__(self, sample):
         img, label = sample
         return self.transform(img),self.transform(label)
@@ -104,9 +105,14 @@ class Normalize(object):
 class ToTensor(object):
     def __init__(self):
         self.transform = transforms.ToTensor()
+        self.id_to_trainId = {}
+        for label in labels_classes:
+            self.id_to_trainId[label.id]=label.trainId if label.trainId != 255 else -1
+        self.id_to_trainId_map_func = np.vectorize(self.id_to_trainId.get)
     def __call__(self, sample):
         img, label = sample
         label = np.array(label)
+        label = self.id_to_trainId_map_func(label)
         return self.transform(img), \
                torch.from_numpy(label.copy()).long()
 
@@ -123,8 +129,8 @@ class RandomResizedCrop(object):
         i, j, h, w = transforms.RandomResizedCrop.get_params(
             img, self.scale,self.radio)
 
-        img = transforms.functional.resized_crop(img, i, j, h, w, self.size)
-        label = transforms.functional.resized_crop(label, i, j, h, w, self.size)
+        img = transforms.functional.resized_crop(img, i, j, h, w, self.size,Image.NEAREST)
+        label = transforms.functional.resized_crop(label, i, j, h, w, self.size,Image.NEAREST)
         return img,label
 
 class RandomCrop(object):
@@ -148,6 +154,7 @@ class CityScapesDataset(Dataset):
         self.n_class   = n_class
         # Add any transformations here
         self.transform = transforms
+
         if self.transform==None:
             self.transform = "resize"
 

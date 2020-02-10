@@ -1,4 +1,4 @@
-from models import UNet
+from models import UNet,UNet_BN, FCN_backbone
 from basic_fcn import FCN
 import torch.nn as nn
 from dataloader import *
@@ -14,7 +14,7 @@ import yaml
 
 import pdb
 
-CUDA_DIX = [0,1,2,3]
+CUDA_DIX = [0,1,2,3,4,5]
 class Train:
 	def __init__(self,
 				 config,
@@ -40,12 +40,15 @@ class Train:
 
 		else:
 			self.gpus =[]
-		self.record = SummaryWriter('runs/unet{}'.format(time.time()))
+		self.record = SummaryWriter('runs/{}_{}'.format(model,time.time()))
 		self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
 		self.num_gpus = len(self.gpus)
 
 		networks = {"UNet":UNet,
-					"base_fc":FCN}
+					"base_fc":FCN,
+					"FCN":FCN_backbone,
+					"UNet_BN":UNet_BN,
+					}
 
 		self.model = networks[model](self.num_classes).to(self.device)
 
@@ -65,7 +68,7 @@ class Train:
 					  std=[0.229, 0.224, 0.225])
 		])
 		self.train_dst = CityScapesDataset(train_path,transforms=transform)
-		self.valid_dst = CityScapesDataset(valid_path,transforms=test_transform)
+		self.valid_dst = CityScapesDataset(valid_path,transforms=transform)
 		self.test_dst = CityScapesDataset(test_path,transforms=test_transform)
 		print("Train set {}\n"
 			  "Validation set {}\n"
@@ -78,7 +81,7 @@ class Train:
 									   shuffle=True,
 									   num_workers=1)
 		self.valid_loader = DataLoader(self.valid_dst,
-									   batch_size=4,
+									   batch_size=self.batch_size,
 									   shuffle=True, num_workers=1)
 		self.test_loader = DataLoader(self.test_dst,
 									  batch_size=4,
@@ -98,7 +101,7 @@ class Train:
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss().to(self.device)
+			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
 		loss_epoch = []
 		valid_accs = []
 		MAX = 0

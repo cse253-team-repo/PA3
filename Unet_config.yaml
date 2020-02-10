@@ -1,10 +1,10 @@
-model: "UNet"
+model: "FCN"
 loss_method: "cross-entropy"
 opt_method: "Adam"
-batch_size: 28
+batch_size: 16
 img_shape: [512,512]
-epochs: 1000
-num_classes: 34
+epochs: 100
+num_classes: 19
 lr: 0.01
 GPU: True
 save_best: True
