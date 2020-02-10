@@ -129,7 +129,7 @@ class RandomResizedCrop(object):
         i, j, h, w = transforms.RandomResizedCrop.get_params(
             img, self.scale,self.radio)
 
-        img = transforms.functional.resized_crop(img, i, j, h, w)
+        img = transforms.functional.resized_crop(img, i, j, h, w, self.size)
         label = transforms.functional.resized_crop(label, i, j, h, w, self.size,Image.NEAREST)
         return img,label
 
