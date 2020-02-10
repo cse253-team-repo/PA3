@@ -1,6 +1,21 @@
 import torch
 import yaml
 import time
+import numpy as np
+
+from PIL import Image
+from dataloader import labels_classes
+
+
+
+color_array = []
+for i in labels_classes:
+        if i.ignoreInEval == False:
+            color_array.append(i.color)
+        else:
+            color_array.append(i.color)
+color_array = np.array(color_array)
+
 def iou(pred, target):
     """
         Calculate IOU in a for each class; Assume data is one hot encoding
@@ -63,7 +78,22 @@ def pixel_acc(y_hat, y):
     #print(N, correct)
     return correct / N
 
+def visualize(output, label):
+    batch_size, h,w = output.shape[0], output.shape[-2], output.shape[-1] 
 
+    pred = torch.argmax(output, dim=1) 
+
+    pred_img = color_array[pred.detach().cpu().numpy()] # batch_size, h, w, 3
+    label_img = color_array[label.detach().cpu().numpy()]
+
+    print("pred img shape:", pred_img.shape)
+
+    pred_img = Image.fromarray(np.uint8(pred_img[0]))
+    label_img = Image.fromarray(np.uint8(label_img[0]))
+
+
+
+'''
 if __name__ == "__main__":
     # test IOU
     # create pred
@@ -94,3 +124,20 @@ if __name__ == "__main__":
     print(out)
     print("time: {}".format(end - start))
     #print(pixel_acc(pred, target))
+'''
+if __name__ == "__main__":
+    pred_img = np.zeros((3,512,512))
+    color_array = []
+    for i in labels_classes:
+        if i.ignoreInEval == False:
+            color_array.append(i.color)
+        else:
+            color_array.append(i.color)
+    color_array = np.array(color_array)
+    print("color array shape: ", color_array.shape)
+    preds = np.arange(0,24).reshape(2,3,4)
+    a = color_array[preds]
+    print(a.shape)
+
+    for i in a:
+        print(a[0].shape)
