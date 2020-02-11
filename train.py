@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 import torch.optim as optim
 import time
+from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50
 from utils import *
 from utils import load_config
 from torch.utils.tensorboard import SummaryWriter
@@ -21,7 +22,7 @@ class Train:
 				 test_path = "./test.csv",
 				 train_path = "./train.csv",
 				 valid_path = "./val.csv",
-				 save_path = "my_model_FCN_resnet50.pt"
+				 save_path = "my_model_Unet.pt"
 				):
 		self.save_path = save_path
 		self.batch_size = config["batch_size"]
@@ -48,9 +49,10 @@ class Train:
 					"base_fc":FCN,
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
+					"Deeplabv3":deeplabv3_resnet101
 					}
-
-		self.model = networks[model](self.num_classes).to(self.device)
+		self.model_name = model
+		self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
 		if self.num_gpus > 1:
@@ -79,6 +81,7 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,
+									   drop_last=True,
 									   num_workers=1)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
@@ -108,6 +111,7 @@ class Train:
 		MAX = 0
 		for epoch in range(self.epochs):
 			loss_itr = []
+			self.model.train()
 			for i, (img, target, label) in enumerate(self.train_loader):
 				itr_start = time.time()
 				#print(train_x.shape)
@@ -117,7 +121,10 @@ class Train:
 				train_y = label.to(self.device)
 
 				optimizer.zero_grad()
-				output = self.model(img)
+				if self.model_name =="Deeplabv3":
+					output = self.model(img)["out"]
+				else:
+					output = self.model(img)
 				# print(train_y_one_hot.shape,output.shape)
 				loss = criterio(output, train_y)
 
@@ -135,8 +142,9 @@ class Train:
 				lr_sheduler.step(epoch)
 
 			valid_acc, valid_loss = self.check_accuracy(self.valid_loader, get_loss=True)
-			print("Epoch: {} \t valid loss: {} \t valid accuracy: {}".format(epoch, valid_loss, valid_acc))
+			print("Epoch: {} \t valid loss: {} \t valid accuracy: {} \t valid miou: {}".format(epoch, valid_loss, valid_acc, valid_miou))
 			self.record.add_scalar("Validation Acc", valid_acc.item(), epoch)
+			# self.record.add_scalar("Validation miou", valid_miou.item(), epoch)
 			if self.save_best:
 				if valid_acc > MAX:
 					self.save_weights(self.save_path)
@@ -147,6 +155,8 @@ class Train:
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
 		losses = []
+		ious = []
+		self.model.eval()
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1)
 		with torch.no_grad():
@@ -155,15 +165,21 @@ class Train:
 				x = x.to(self.device)
 				y_one_hot = y_one_hot.to(self.device)
 				y = y.to(self.device)
-				out = self.model(x)
+				if self.model_name =="Deeplabv3":
+					out = self.model(x)["out"]
+				else:
+					out = self.model(x)
 				loss = criterio(out, y)
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out,dim=1)
 				acc = pixel_acc(y_hat, y)
+				# y_hat_onehot = to_one_hot(y_hat,self.num_classes).to(self.device)
+				# iou = iou2(y_hat_onehot,y_one_hot)
+				ious.append(np.mean(iou))
 				accs.append(acc)
 		if get_loss:
-			return np.mean(accs), np.mean(losses)
-		return np.mean(accs)
+			return np.mean(accs), np.mean(losses)#,np.mean(ious)
+		return np.mean(accs)#,np.mean(ious)
 
 	def save_weights(self,path):
 		print("Saving the model ...")

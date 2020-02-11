@@ -93,7 +93,7 @@ def visualize(output, label):
 
 
 
-'''
+
 if __name__ == "__main__":
     # test IOU
     # create pred
@@ -124,20 +124,27 @@ if __name__ == "__main__":
     print(out)
     print("time: {}".format(end - start))
     #print(pixel_acc(pred, target))
-'''
-if __name__ == "__main__":
-    pred_img = np.zeros((3,512,512))
-    color_array = []
-    for i in labels_classes:
-        if i.ignoreInEval == False:
-            color_array.append(i.color)
-        else:
-            color_array.append(i.color)
-    color_array = np.array(color_array)
-    print("color array shape: ", color_array.shape)
-    preds = np.arange(0,24).reshape(2,3,4)
-    a = color_array[preds]
-    print(a.shape)
 
-    for i in a:
-        print(a[0].shape)
+
+def to_one_hot(label,num_class):
+    b, h, w = label.shape
+    label_onehot = torch.zeros(b,num_class, h, w).long()
+    for c in range(num_class):
+        label_onehot[:,c,:,:][label == c] = 1
+    return label_onehot
+# if __name__ == "__main__":
+#     pred_img = np.zeros((3,512,512))
+#     color_array = []
+#     for i in labels_classes:
+#         if i.ignoreInEval == False:
+#             color_array.append(i.color)
+#         else:
+#             color_array.append(i.color)
+#     color_array = np.array(color_array)
+#     print("color array shape: ", color_array.shape)
+#     preds = np.arange(0,24).reshape(2,3,4)
+#     a = color_array[preds]
+#     print(a.shape)
+#
+#     for i in a:
+#         print(a[0].shape)

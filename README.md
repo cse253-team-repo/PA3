@@ -2,4 +2,4 @@
 
 Semantic segmentation
 
-http://ieng6-203.ucsd.edu:16543/?token=4f6670ce2ad762b753139d4c2d25eba0beafbf678361504605da087e30bd6928
+http://ieng6-202.ucsd.edu:16542/?token=6428ad6df8f057f0e2c0247a76db57b34054c990da40b14d090cdc2be778764f
