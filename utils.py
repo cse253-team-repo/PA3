@@ -74,7 +74,7 @@ def pixel_acc(y_hat, y):
     """
     correct = torch.sum(y_hat==y).item()
     # Number of pixels
-    N = (y.view(-1,1).shape[0])
+    N = y[y>=0].view(-1).shape[0]
     #print(N, correct)
     return correct / N
 
