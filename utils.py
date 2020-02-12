@@ -2,7 +2,7 @@ import torch
 import yaml
 import time
 import numpy as np
-
+import pdb
 from PIL import Image
 from dataloader import labels_classes
 
@@ -50,11 +50,13 @@ def iou2(pred, target):
         Returns:
             ious: list of iou for each class
     """
-
+    ious = torch.zeros(pred.shape[1])
     intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
     union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
-    ious = (intersection / union).tolist()
-    return ious
+    ious[union!=0] = (intersection[union!=0] / union[union!=0])
+    ious[union==0] = float('nan')
+    pdb.set_trace()
+    return ious.tolist()
 
 def load_config(path):
     """
@@ -93,14 +95,18 @@ def visualize(output, label):
 
 
 
-'''
+
 if __name__ == "__main__":
     # test IOU
     # create pred
     n_class = 8
     h = w = 513
-    pred = torch.eye(n_class)[torch.randint(0, n_class, (h*w,))].view(h,w,8)
-    target = torch.eye(n_class)[torch.randint(0, n_class, (h*w,))].view(h,w,8)
+    rand1 = torch.randint(0, n_class, (h*w,))
+    rand2 = torch.randint(0, n_class, (h*w,))
+    rand1[rand1 == 1]=0
+    rand2[rand2 == 1]=0
+    pred = torch.eye(n_class)[rand1].view(h,w,8)
+    target = torch.eye(n_class)[rand2].view(h,w,8)
     """
     pred = torch.tensor([[[ 0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
          [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
@@ -124,20 +130,3 @@ if __name__ == "__main__":
     print(out)
     print("time: {}".format(end - start))
     #print(pixel_acc(pred, target))
-'''
-if __name__ == "__main__":
-    pred_img = np.zeros((3,512,512))
-    color_array = []
-    for i in labels_classes:
-        if i.ignoreInEval == False:
-            color_array.append(i.color)
-        else:
-            color_array.append(i.color)
-    color_array = np.array(color_array)
-    print("color array shape: ", color_array.shape)
-    preds = np.arange(0,24).reshape(2,3,4)
-    a = color_array[preds]
-    print(a.shape)
-
-    for i in a:
-        print(a[0].shape)
