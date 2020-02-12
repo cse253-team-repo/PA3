@@ -120,7 +120,7 @@ class Train:
 				output = self.model(img)
 				# print(train_y_one_hot.shape,output.shape)
 				loss = criterio(output, train_y)
-				y_hat = torch.argmax(out,dim=1)
+				y_hat = torch.argmax(output,dim=1)
 				iou2_train= iou2(y_hat, train_y)
 				iou1_train= iou1(y_hat, train_y)
 				print("iou2: ", iou2_train)
