@@ -80,10 +80,7 @@ def pixel_acc(y_hat, y):
     #print(N, correct)
     return correct / N
 
-def visualize(output, label):
-    batch_size, h,w = output.shape[0], output.shape[-2], output.shape[-1] 
-
-    pred = torch.argmax(output, dim=1) 
+def visualize(pred, label):
 
     pred_img = color_array[pred.detach().cpu().numpy()] # batch_size, h, w, 3
     label_img = color_array[label.detach().cpu().numpy()]
@@ -92,6 +89,8 @@ def visualize(output, label):
 
     pred_img = Image.fromarray(np.uint8(pred_img[0]))
     label_img = Image.fromarray(np.uint8(label_img[0]))
+    pred_img.save("my_pre_Unet.png")
+    label_img.save("my_label_Unet.png")
 
 def plot(loss_epoch, valid_accs):
     curve = {"train_loss": loss_epoch, "valid_accs": valid_accs}
