@@ -91,6 +91,10 @@ def visualize(output, label):
     pred_img = Image.fromarray(np.uint8(pred_img[0]))
     label_img = Image.fromarray(np.uint8(label_img[0]))
 
+def plot(loss_epoch, valid_accs):
+    curve = {"train_loss": loss_epoch, "valid_accs": valid_accs}
+    with open("curves_resnet50.json", 'w') as f:
+        json.dump(curve, f)
 
 
 '''

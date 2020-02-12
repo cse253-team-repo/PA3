@@ -14,7 +14,7 @@ import yaml
 
 import pdb
 
-CUDA_DIX = [0,1,2,3,4,5]
+CUDA_DIX = [0,1]
 class Train:
 	def __init__(self,
 				 config,
@@ -120,7 +120,11 @@ class Train:
 				output = self.model(img)
 				# print(train_y_one_hot.shape,output.shape)
 				loss = criterio(output, train_y)
-
+				y_hat = torch.argmax(out,dim=1)
+				iou2_train= iou2(y_hat, train_y)
+				iou1_train= iou1(y_hat, train_y)
+				print("iou2: ", iou2_train)
+				print("iou1: ", iou1_train)
 				loss.backward()
 				optimizer.step()
 				loss_itr.append(loss.item())
@@ -144,6 +148,8 @@ class Train:
 			valid_accs.append(valid_acc)
 
 
+			plot(loss_epoch, valid_accs)
+
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
 		losses = []
@@ -160,6 +166,8 @@ class Train:
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out,dim=1)
 				acc = pixel_acc(y_hat, y)
+				iou_test = iou2(y_hat, y)
+				print("iou: ", iou_test)
 				accs.append(acc)
 		if get_loss:
 			return np.mean(accs), np.mean(losses)
@@ -174,6 +182,8 @@ class Train:
 		print("Loading the parameters")
 		self.model.load_state_dict(torch.load(path))
 		self.model.eval()
+	
+	
 
 
 

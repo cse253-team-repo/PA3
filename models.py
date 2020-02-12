@@ -253,7 +253,7 @@ class UNet(nn.Module):
 class FCN_backbone(nn.Module):
     def __init__(self, num_classes,
                  retrain=True,
-                 backbone='resnet101'):
+                 backbone='resnet50'):
         super(FCN_backbone, self).__init__()
 
         self.n_class = num_classes
