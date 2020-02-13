@@ -4,6 +4,7 @@ import torch.nn as nn
 from dataloader import *
 from torch.utils.data import DataLoader,random_split
 import numpy as np
+import os
 from tqdm import tqdm
 import torch
 from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50
@@ -22,9 +23,7 @@ class Test:
                  test_path = "./test.csv",
                  train_path = "./train.csv",
                  valid_path = "./val.csv",
-                 save_path = "my_model_Unet.pt"
                 ):
-        self.save_path = save_path
         self.batch_size = config["batch_size"]
         self.epochs = config["epochs"]
         self.num_classes = config["num_classes"]
@@ -72,13 +71,13 @@ class Test:
             len(self.test_dst)))
 
         self.valid_loader = DataLoader(self.valid_dst,
-                                       batch_size=4,
+                                       batch_size=1,
                                        shuffle=True,
-                                       num_workers=2)
+                                       num_workers=1)
         self.test_loader = DataLoader(self.test_dst,
-                                      batch_size=4,
+                                      batch_size=1,
                                       shuffle=True,
-                                      num_workers=2)
+                                      num_workers=1)
 
         self.load_weights(self.save_path)
 
@@ -91,9 +90,9 @@ class Test:
     def check_accuracy(self, dataloader):
         accs = []
         ious = []
+        if os.path.exists('./result_images') == False:
+            os.mkdir('./result_images')
         self.model.eval()
-        correct = 0
-        N = 0
         with torch.no_grad():
             for i, data in enumerate(tqdm(dataloader)):
                 x, y_one_hot, y = data
@@ -106,7 +105,7 @@ class Test:
                     out = self.model(x)
 
                 y_hat = torch.argmax(out,dim=1)
-                visualize(y_hat,y)
+                visualize(y_hat,y,'./result_images/{}'.format(i))
                 y_hat_onehot = to_one_hot(y_hat,self.num_classes)
                 b_acc = pixel_acc(y_hat, y)
                 b_ious = iou2(y_hat_onehot, y_one_hot)
@@ -124,7 +123,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("Unet_config.yaml")
+    config = load_config("base_fc_config.yaml")
     train = Test(config)
     train.test()
 
