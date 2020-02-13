@@ -54,7 +54,7 @@ def iou2(pred, target):
     intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
     union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
     ious[union!=0] = (intersection[union!=0] / union[union!=0])
-    ious[union==0] = 0
+    ious[union==0] = float('nan')
     return ious.tolist()
 
 def load_config(path):

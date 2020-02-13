@@ -118,7 +118,7 @@ class ToTensor(object):
                torch.from_numpy(label.copy()).long()
 
 class RandomRescale(object):
-    def __init__(self,min_ratio=0.5,max_ratio=1):
+    def __init__(self,min_ratio=0.5,max_ratio=1.0):
         self.min_ratio = min_ratio
         self.max_ratio = max_ratio
     def __call__(self, sample):
@@ -126,15 +126,18 @@ class RandomRescale(object):
         width, height = img.size
         ratio = random.uniform(self.min_ratio,self.max_ratio)
         new_width, new_height = int(ratio*width), int(ratio*height)
-        return img.resize((new_width,new_width)), label.resize((new_width,new_width))
+        return img.resize((new_width,new_height)), label.resize((new_width,new_height))
 
 class RandomFlip(object):
     def __init__(self,p=0.5):
-        self.transform = transforms.RandomHorizontalFlip(p)
+        self.p = p
+
     def __call__(self, sample):
         img, label = sample
-        return self.transform(img),self.transform(label)
-
+        if random.uniform(0,1)>self.p:
+            return transforms.functional.hflip(img),transforms.functional.hflip(label)
+        else:
+            return img, label
 
 class RandomCrop(object):
     def __init__(self,output_size):

@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 import torch.optim as optim
 import time
+from tqdm import tqdm
 from utils import *
 from utils import load_config
 from torch.utils.tensorboard import SummaryWriter
@@ -13,7 +14,10 @@ import yaml
 # from tqdm import tqdm
 
 import pdb
-
+CLASS_PIX=[742593219,86277776,348211930,10532667,14233504,
+22534680,3647030,9750011,274652891,18558778,
+62168130,25954782,3507436,125749610,5053833,
+4915128,4801188,1896224,8614510]
 CUDA_DIX = [0,1]
 class Train:
 	def __init__(self,
@@ -56,7 +60,7 @@ class Train:
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_{}.pt".format(model)
+			self.save_path = "my_model_weighted_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -65,7 +69,7 @@ class Train:
 
 		transform = transforms.Compose([
 			RandomFlip(),
-			RandomRescale(),
+			RandomRescale(0.8,1.2),
 			RandomCrop(img_shape),
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
@@ -103,15 +107,25 @@ class Train:
 
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
+	def count_weight(self):
+		class_count = [0]*self.num_classes
+		for i, (img, target, label) in enumerate(tqdm(self.train_loader)):
+			train_y = label.to(self.device)
+			for c in range(self.num_classes):
+				class_count[c] += torch.sum(train_y==c)
+		print(class_count)
 
 	def train_on_batch(self, verbose=True, lr_decay=True):
 
+		class_pix = np.sqrt(CLASS_PIX)
+		weighted = 5 * class_pix.min() / class_pix
+		weighted = torch.tensor(weighted).float().to(self.device)
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
+			criterio = nn.CrossEntropyLoss(weight=weighted,ignore_index=-1).to(self.device)
 		loss_epoch = []
 		valid_accs = []
 		MAX = 0
@@ -133,11 +147,6 @@ class Train:
 					output = self.model(img)
 				# print(train_y_one_hot.shape,output.shape)
 				loss = criterio(output, train_y)
-				y_hat = torch.argmax(output,dim=1)
-				iou2_train= iou2(y_hat, train_y)
-				iou1_train= iou1(y_hat, train_y)
-				print("iou2: ", iou2_train)
-				print("iou1: ", iou1_train)
 				loss.backward()
 				optimizer.step()
 				loss_itr.append(loss.item())
@@ -181,11 +190,11 @@ class Train:
 					out = self.model(x)
 				loss = criterio(out, y)
 				losses.append(loss.cpu().numpy())
-				y_hat = torch.argmax(out,dim=1)
-				acc = pixel_acc(y_hat, y)
-				iou_test = iou2(y_hat, y)
-				print("iou: ", iou_test)
-				accs.append(acc)
+				y_hat = torch.argmax(out, dim=1)
+				# y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
+				b_acc = pixel_acc(y_hat, y)
+				# b_ious = iou2(y_hat_onehot, y_one_hot)
+				accs.append(b_acc)
 		if get_loss:
 			return np.mean(accs), np.mean(losses)
 		return np.mean(accs)
@@ -205,8 +214,9 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("Unet_config.yaml")
+	config = load_config("base_fc_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
+
 
 
