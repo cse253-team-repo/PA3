@@ -2,6 +2,7 @@ from torch.utils.data import Dataset, DataLoader# For custom data-sets
 import torchvision.transforms as transforms
 import numpy as np
 from PIL import Image
+import random
 import torch
 import pandas as pd
 import torch.functional as F
@@ -116,6 +117,23 @@ class ToTensor(object):
         return self.transform(img), \
                torch.from_numpy(label.copy()).long()
 
+class RandomRescale(object):
+    def __init__(self,min_ratio=0.5,max_ratio=1):
+        self.min_ratio = min_ratio
+        self.max_ratio = max_ratio
+    def __call__(self, sample):
+        img, label = sample
+        width, height = img.size
+        ratio = random.uniform(self.min_ratio,self.max_ratio)
+        new_width, new_height = int(ratio*width), int(ratio*height)
+        return img.resize((new_width,new_width)), label.resize((new_width,new_width))
+
+class RandomFlip(object):
+    def __init__(self,p=0.5):
+        self.transform = transforms.RandomHorizontalFlip(p)
+    def __call__(self, sample):
+        img, label = sample
+        return self.transform(img),self.transform(label)
 
 
 class RandomCrop(object):

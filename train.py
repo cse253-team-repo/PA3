@@ -64,7 +64,9 @@ class Train:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
 
 		transform = transforms.Compose([
-			RandomResizedCrop(img_shape),
+			RandomFlip(),
+			RandomRescale(),
+			RandomCrop(img_shape),
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
 					  std=[0.229, 0.224, 0.225])

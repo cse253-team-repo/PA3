@@ -16,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import pdb
 
-CUDA_DIX = [0,1,2,3,4]
+CUDA_DIX = [0,1]
 class Test:
     def __init__(self,
                  config,
@@ -24,6 +24,7 @@ class Test:
                  train_path = "./train.csv",
                  valid_path = "./val.csv",
                 ):
+        self.save_path = 'my_model_base_fc.pt'
         self.batch_size = config["batch_size"]
         self.epochs = config["epochs"]
         self.num_classes = config["num_classes"]
@@ -40,7 +41,7 @@ class Test:
 
         else:
             self.gpus =[]
-        self.record = SummaryWriter('runs/{}_{}'.format(model,time.time()))
+
         self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
         self.num_gpus = len(self.gpus)
 
@@ -94,7 +95,7 @@ class Test:
             os.mkdir('./result_images')
         self.model.eval()
         with torch.no_grad():
-            for i, data in enumerate(tqdm(dataloader)):
+            for i, data in enumerate(dataloader):
                 x, y_one_hot, y = data
                 x = x.to(self.device)
                 y_one_hot = y_one_hot.to(self.device)
@@ -106,9 +107,10 @@ class Test:
 
                 y_hat = torch.argmax(out,dim=1)
                 visualize(y_hat,y,'./result_images/{}'.format(i))
-                y_hat_onehot = to_one_hot(y_hat,self.num_classes)
+                y_hat_onehot = to_one_hot(y_hat,self.num_classes).to(self.device)
                 b_acc = pixel_acc(y_hat, y)
                 b_ious = iou2(y_hat_onehot, y_one_hot)
+                print(b_acc,b_ious)
                 accs.append(b_acc)
                 ious.append(b_ious)
                 print('batch {}'.format(i))
