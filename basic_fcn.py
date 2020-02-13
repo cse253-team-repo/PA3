@@ -2,9 +2,9 @@ import torch.nn as nn
 
 class FCN(nn.Module):
 
-    def __init__(self, n_class):
+    def __init__(self, num_classes):
         super().__init__()
-        self.n_class = n_class
+        self.n_class = num_classes
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1, dilation=1),
             nn.BatchNorm2d(32),

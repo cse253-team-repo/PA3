@@ -37,6 +37,30 @@ class Loss:
         pass
 
 
+class WCELoss(nn.modules.loss._WeightedLoss):
+    def __init__(self, gamma=2, weight=None, size_average=None, ignore_index=-1,
+                 reduce=None, reduction='mean'):
+        super(WCELoss, self).__init__(weight, size_average, reduce, reduction)
+        self.gamma = gamma
+        self.weight = weight
+        self.size_average = size_average
+        self.ignore_index = ignore_index
+
+    def forward(self, input, target):
+        # inputs and targets are assumed to be BatchxClasses
+        assert len(input.shape) == len(target.shape)
+        assert input.size(0) == target.size(0)
+        assert input.size(1) == target.size(1)
+
+        # compute the negative likelyhood
+        logpt = - F.cross_entropy(input, target, weight=self.weight, reduction=self.reduction)
+        pt = torch.exp(logpt)
+
+        # compute the loss
+        focal_loss = -((1 - pt) ** self.gamma) * logpt
+        balanced_focal_loss = self.balance_param * focal_loss
+        return balanced_focal_loss
+
 
 
 
@@ -303,7 +327,7 @@ class FCN_backbone(nn.Module):
         return score
 
     def load_encoder(self, backbone):
-        pretrained_net = pretrained_models[backbone](pretrained=False)
+        pretrained_net = pretrained_models[backbone](pretrained=True)
         encoder = nn.Sequential()
 
         if backbone.startswith('res'):

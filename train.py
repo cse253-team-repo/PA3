@@ -15,16 +15,15 @@ import yaml
 
 import pdb
 
-CUDA_DIX = [0,1,2,3,4,5]
+CUDA_DIX = [0,1,2,3,4]
 class Train:
 	def __init__(self,
 				 config,
 				 test_path = "./test.csv",
 				 train_path = "./train.csv",
-				 valid_path = "./val.csv",
-				 save_path = "my_model_Unet.pt"
+				 valid_path = "./val.csv"
 				):
-		self.save_path = save_path
+
 		self.batch_size = config["batch_size"]
 		self.epochs = config["epochs"]
 		self.num_classes = config["num_classes"]
@@ -36,6 +35,7 @@ class Train:
 		GPU = config["GPU"]
 		img_shape = tuple(config["img_shape"])
 		model = config["model"]
+
 		if GPU:
 			self.gpus = CUDA_DIX
 
@@ -49,17 +49,24 @@ class Train:
 					"base_fc":FCN,
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
-					"Deeplabv3":deeplabv3_resnet101
+					"Deeplabv3":deeplabv3_resnet50
 					}
 		self.model_name = model
-		self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
+		if model=="FCN":
+			backbone = config["backbone"]
+			self.save_path = "my_model_{}_{}.pt".format(model, backbone)
+			self.model = networks[self.model_name](num_classes = self.num_classes,
+												   backbone=backbone).to(self.device)
+		else:
+			self.save_path = "my_model_{}.pt".format(model)
+			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
 		if self.num_gpus > 1:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
 
 		transform = transforms.Compose([
-			RandomResizedCrop(img_shape),
+			RandomCrop(img_shape),
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
 					  std=[0.229, 0.224, 0.225])
@@ -142,7 +149,7 @@ class Train:
 				lr_sheduler.step(epoch)
 
 			valid_acc, valid_loss = self.check_accuracy(self.valid_loader, get_loss=True)
-			print("Epoch: {} \t valid loss: {} \t valid accuracy: {} \t valid miou: {}".format(epoch, valid_loss, valid_acc, valid_miou))
+			print("Epoch: {} \t valid loss: {} \t valid accuracy: {}".format(epoch, valid_loss, valid_acc))
 			self.record.add_scalar("Validation Acc", valid_acc.item(), epoch)
 			# self.record.add_scalar("Validation miou", valid_miou.item(), epoch)
 			if self.save_best:
@@ -155,7 +162,6 @@ class Train:
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
 		losses = []
-		ious = []
 		self.model.eval()
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1)
@@ -172,10 +178,8 @@ class Train:
 				loss = criterio(out, y)
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out,dim=1)
-				acc = pixel_acc(y_hat, y)
-				# y_hat_onehot = to_one_hot(y_hat,self.num_classes).to(self.device)
-				# iou = iou2(y_hat_onehot,y_one_hot)
-				ious.append(np.mean(iou))
+				acc, correct, N = pixel_acc(y_hat, y)
+
 				accs.append(acc)
 		if get_loss:
 			return np.mean(accs), np.mean(losses)#,np.mean(ious)
@@ -194,7 +198,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("Unet_config.yaml")
+	config = load_config("base_fc_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 

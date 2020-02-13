@@ -50,11 +50,26 @@ def iou2(pred, target):
         Returns:
             ious: list of iou for each class
     """
-
+    print(pred.shape, target.shape)
     intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
     union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
     ious = (intersection / union).tolist()
     return ious
+
+def iou3(pred, target):
+    """
+        Calculate IOU in a for each class; Assume data is one hot encoding
+        Args:
+            pred: prediction label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+            target: target label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+        Returns:
+            ious: list of iou for each class
+    """
+
+    intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
+    union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
+    ious = (intersection / union).tolist()
+    return ious,intersection,union
 
 def load_config(path):
     """
@@ -76,12 +91,12 @@ def pixel_acc(y_hat, y):
     # Number of pixels
     N = y[y>=0].view(-1).shape[0]
     #print(N, correct)
-    return correct / N
+    if N!=0:
+        return correct / N
+    else:
+        return 0
 
-def visualize(output, label):
-    batch_size, h,w = output.shape[0], output.shape[-2], output.shape[-1] 
-
-    pred = torch.argmax(output, dim=1) 
+def visualize(pred, label):
 
     pred_img = color_array[pred.detach().cpu().numpy()] # batch_size, h, w, 3
     label_img = color_array[label.detach().cpu().numpy()]
@@ -90,9 +105,12 @@ def visualize(output, label):
 
     pred_img = Image.fromarray(np.uint8(pred_img[0]))
     label_img = Image.fromarray(np.uint8(label_img[0]))
+    pred_img.save("my_pre_Unet.png")
+    label_img.save("my_label_Unet.png")
 
-
-
+def to_one_hot(label,num_class):
+    label_one_hot = torch.eye(num_class)[label]
+    return label_one_hot.permute([0,3,1,2])
 
 if __name__ == "__main__":
     # test IOU
@@ -118,20 +136,18 @@ if __name__ == "__main__":
     pred = pred.unsqueeze(0)
     target = target.unsqueeze(0)
     print(iou(pred, target))
+    pred = pred.permute(0, 3, 1, 2)
+    target = target.permute(0, 3, 1, 2)
+    print(pred.shape)
     start =time.time()
-    out = iou2(pred.permute(0, 3, 1, 2), target.permute(0, 3, 1, 2))
+    out = iou2(pred,target)
     end = time.time()
     print(out)
     print("time: {}".format(end - start))
     #print(pixel_acc(pred, target))
 
 
-def to_one_hot(label,num_class):
-    b, h, w = label.shape
-    label_onehot = torch.zeros(b,num_class, h, w).long()
-    for c in range(num_class):
-        label_onehot[:,c,:,:][label == c] = 1
-    return label_onehot
+
 # if __name__ == "__main__":
 #     pred_img = np.zeros((3,512,512))
 #     color_array = []
