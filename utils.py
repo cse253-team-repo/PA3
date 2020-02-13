@@ -98,6 +98,9 @@ def plot(loss_epoch, valid_accs):
         json.dump(curve, f)
 
 
+def to_one_hot(label,num_class):
+    label_one_hot = torch.eye(num_class)[label]
+    return label_one_hot.permute([0,3,1,2])
 
 if __name__ == "__main__":
     # test IOU
