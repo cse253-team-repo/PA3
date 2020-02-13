@@ -6,7 +6,6 @@ from torch.utils.data import DataLoader
 import numpy as np
 import torch.optim as optim
 import time
-from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50
 from utils import *
 from utils import load_config
 from torch.utils.tensorboard import SummaryWriter
@@ -15,7 +14,7 @@ import yaml
 
 import pdb
 
-CUDA_DIX = [0,1,2,3,4]
+CUDA_DIX = [0,1]
 class Train:
 	def __init__(self,
 				 config,
@@ -49,7 +48,6 @@ class Train:
 					"base_fc":FCN,
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
-					"Deeplabv3":deeplabv3_resnet50
 					}
 		self.model_name = model
 		if model=="FCN":
@@ -66,7 +64,7 @@ class Train:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
 
 		transform = transforms.Compose([
-			RandomCrop(img_shape),
+			RandomResizedCrop(img_shape),
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
 					  std=[0.229, 0.224, 0.225])
@@ -88,7 +86,6 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,
-									   drop_last=True,
 									   num_workers=1)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
@@ -134,7 +131,11 @@ class Train:
 					output = self.model(img)
 				# print(train_y_one_hot.shape,output.shape)
 				loss = criterio(output, train_y)
-
+				y_hat = torch.argmax(output,dim=1)
+				iou2_train= iou2(y_hat, train_y)
+				iou1_train= iou1(y_hat, train_y)
+				print("iou2: ", iou2_train)
+				print("iou1: ", iou1_train)
 				loss.backward()
 				optimizer.step()
 				loss_itr.append(loss.item())
@@ -151,13 +152,14 @@ class Train:
 			valid_acc, valid_loss = self.check_accuracy(self.valid_loader, get_loss=True)
 			print("Epoch: {} \t valid loss: {} \t valid accuracy: {}".format(epoch, valid_loss, valid_acc))
 			self.record.add_scalar("Validation Acc", valid_acc.item(), epoch)
-			# self.record.add_scalar("Validation miou", valid_miou.item(), epoch)
 			if self.save_best:
 				if valid_acc > MAX:
 					self.save_weights(self.save_path)
 					MAX = valid_acc
 			valid_accs.append(valid_acc)
 
+
+			plot(loss_epoch, valid_accs)
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
@@ -178,12 +180,13 @@ class Train:
 				loss = criterio(out, y)
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out,dim=1)
-				acc, correct, N = pixel_acc(y_hat, y)
-
+				acc = pixel_acc(y_hat, y)
+				iou_test = iou2(y_hat, y)
+				print("iou: ", iou_test)
 				accs.append(acc)
 		if get_loss:
-			return np.mean(accs), np.mean(losses)#,np.mean(ious)
-		return np.mean(accs)#,np.mean(ious)
+			return np.mean(accs), np.mean(losses)
+		return np.mean(accs)
 
 	def save_weights(self,path):
 		print("Saving the model ...")
@@ -197,8 +200,10 @@ class Train:
 
 
 
+
+
 if __name__ == "__main__":
-	config = load_config("base_fc_config.yaml")
+	config = load_config("Unet_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 

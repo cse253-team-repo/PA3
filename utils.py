@@ -50,26 +50,12 @@ def iou2(pred, target):
         Returns:
             ious: list of iou for each class
     """
-    print(pred.shape, target.shape)
+    ious = torch.zeros(pred.shape[1])
     intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
     union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
-    ious = (intersection / union).tolist()
-    return ious
-
-def iou3(pred, target):
-    """
-        Calculate IOU in a for each class; Assume data is one hot encoding
-        Args:
-            pred: prediction label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
-            target: target label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
-        Returns:
-            ious: list of iou for each class
-    """
-
-    intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
-    union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
-    ious = (intersection / union).tolist()
-    return ious,intersection,union
+    ious[union!=0] = (intersection[union!=0] / union[union!=0])
+    ious[union==0] = float('nan')
+    return ious.tolist()
 
 def load_config(path):
     """
@@ -91,12 +77,12 @@ def pixel_acc(y_hat, y):
     # Number of pixels
     N = y[y>=0].view(-1).shape[0]
     #print(N, correct)
-    if N!=0:
-        return correct / N
-    else:
-        return 0
+    return correct / N
 
-def visualize(pred, label):
+def visualize(output, label):
+    batch_size, h,w = output.shape[0], output.shape[-2], output.shape[-1] 
+
+    pred = torch.argmax(output, dim=1) 
 
     pred_img = color_array[pred.detach().cpu().numpy()] # batch_size, h, w, 3
     label_img = color_array[label.detach().cpu().numpy()]
@@ -105,8 +91,12 @@ def visualize(pred, label):
 
     pred_img = Image.fromarray(np.uint8(pred_img[0]))
     label_img = Image.fromarray(np.uint8(label_img[0]))
-    pred_img.save("my_pre_Unet.png")
-    label_img.save("my_label_Unet.png")
+
+def plot(loss_epoch, valid_accs):
+    curve = {"train_loss": loss_epoch, "valid_accs": valid_accs}
+    with open("curves_resnet50.json", 'w') as f:
+        json.dump(curve, f)
+
 
 def to_one_hot(label,num_class):
     label_one_hot = torch.eye(num_class)[label]
@@ -136,31 +126,26 @@ if __name__ == "__main__":
     pred = pred.unsqueeze(0)
     target = target.unsqueeze(0)
     print(iou(pred, target))
-    pred = pred.permute(0, 3, 1, 2)
-    target = target.permute(0, 3, 1, 2)
-    print(pred.shape)
     start =time.time()
-    out = iou2(pred,target)
+    out = iou2(pred.permute(0, 3, 1, 2), target.permute(0, 3, 1, 2))
     end = time.time()
     print(out)
     print("time: {}".format(end - start))
     #print(pixel_acc(pred, target))
+'''
+if __name__ == "__main__":
+    pred_img = np.zeros((3,512,512))
+    color_array = []
+    for i in labels_classes:
+        if i.ignoreInEval == False:
+            color_array.append(i.color)
+        else:
+            color_array.append(i.color)
+    color_array = np.array(color_array)
+    print("color array shape: ", color_array.shape)
+    preds = np.arange(0,24).reshape(2,3,4)
+    a = color_array[preds]
+    print(a.shape)
 
-
-
-# if __name__ == "__main__":
-#     pred_img = np.zeros((3,512,512))
-#     color_array = []
-#     for i in labels_classes:
-#         if i.ignoreInEval == False:
-#             color_array.append(i.color)
-#         else:
-#             color_array.append(i.color)
-#     color_array = np.array(color_array)
-#     print("color array shape: ", color_array.shape)
-#     preds = np.arange(0,24).reshape(2,3,4)
-#     a = color_array[preds]
-#     print(a.shape)
-#
-#     for i in a:
-#         print(a[0].shape)
+    for i in a:
+        print(a[0].shape)
