@@ -116,22 +116,7 @@ class ToTensor(object):
         return self.transform(img), \
                torch.from_numpy(label.copy()).long()
 
-class RandomResizedCrop(object):
-    def __init__(self,size,
-                 scale=(0.8, 1.2),
-                 ratio=(3. / 4., 4. / 3.)):
-        self.scale = scale
-        self.radio = ratio
-        self.size = size
 
-    def __call__(self, sample):
-        img, label = sample
-        i, j, h, w = transforms.RandomResizedCrop.get_params(
-            img, self.scale,self.radio)
-
-        img = transforms.functional.resized_crop(img, i, j, h, w, self.size)
-        label = transforms.functional.resized_crop(label, i, j, h, w, self.size,Image.NEAREST)
-        return img,label
 
 class RandomCrop(object):
     def __init__(self,output_size):
