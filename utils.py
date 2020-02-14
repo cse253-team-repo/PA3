@@ -68,6 +68,7 @@ class IOU:
             Args:
                 pred: prediction label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
                 target: target label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+                output: flag; True when output the iou for this batch data
             Returns:
                 ious: list of iou for each class
         """
@@ -155,7 +156,7 @@ if __name__ == "__main__":
     print(out)
     print(myIOU.CalculateIou())
     #print(pixel_acc(pred, target))
-'''
+''' 
 if __name__ == "__main__":
     pred_img = np.zeros((3,512,512))
     color_array = []
