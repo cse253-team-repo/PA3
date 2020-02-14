@@ -4,7 +4,7 @@ opt_method: "Adam"
 batch_size: 16
 img_shape: [512,512]
 epochs: 100
-num_classes: 34
+num_classes: 19
 lr: 0.01
 GPU: True
 backbone: "resnet50"

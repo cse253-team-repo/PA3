@@ -9,4 +9,4 @@ lr: 0.01
 GPU: True
 backbone: "resnet50"
 save_best: True
-retrain: False
+retrain: True

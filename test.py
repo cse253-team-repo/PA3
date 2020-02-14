@@ -125,11 +125,8 @@ class Test:
                     visualize(y_hat,y,'./result_images/{}'.format(i))
                 y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
 
-                pred = y_hat_onehot[:, train_ids, :, :]
-                target = y_one_hot[:, train_ids, :, :]
-
-                b_acc = pixel_acc(pred, target)
-                ioucomputer.UpdateIou(pred, target)
+                b_acc = pixel_acc(y_hat, y)
+                ioucomputer.UpdateIou(y_hat_onehot, y_one_hot)
                 print(b_acc)
                 accs.append(b_acc)
                 print('batch {}'.format(i))

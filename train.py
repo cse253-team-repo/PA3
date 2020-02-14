@@ -7,7 +7,7 @@ import numpy as np
 import torch.optim as optim
 import time
 from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50,DeepLabV3
-from ASPP import Deeplab
+
 from tqdm import tqdm
 from utils import *
 from torch.utils.tensorboard import SummaryWriter
@@ -20,7 +20,7 @@ CLASS_PIX=[742593219,86277776,348211930,10532667,14233504,
 62168130,25954782,3507436,125749610,5053833,
 4915128,4801188,1896224,8614510]
 
-
+CUDA_DIX = [0,1,2,3]
 class Train:
 	def __init__(self,
 				 config,
@@ -37,16 +37,12 @@ class Train:
 		self.loss_method = config["loss_method"]
 		self.save_best = config["save_best"]
 		self.retrain = config["retrain"]
-		if "CUDA_DIX" in config:
-			self.CUDA_DIX = config["CUDA_DIX"]
-		else:
-			self.CUDA_DIX = [0]
 		GPU = config["GPU"]
 		img_shape = tuple(config["img_shape"])
 		model = config["model"]
 
 		if GPU:
-			self.gpus = self.CUDA_DIX
+			self.gpus = CUDA_DIX
 
 		else:
 			self.gpus =[]
@@ -58,8 +54,7 @@ class Train:
 					"base_fc":FCN,
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
-					"Deeplabv3": deeplabv3_resnet50,
-					"Deeplab": Deeplab
+					"Deeplabv3": deeplabv3_resnet50
 					}
 		self.model_name = model
 		if model=="FCN":
@@ -67,23 +62,13 @@ class Train:
 			self.save_path = "my_model_{}_{}.pt".format(model, backbone)
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
-		if model=="Deeplab":
-			backbone = config["backbone"]
-			self.save_path = "my_model_{}".format(model) + ("_"+backbone if config["use_torch_model"] else "") +".pt"
-			self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
-												retrain_backbone=config["retrain_backbone"],
-												 backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_{}_34.pt".format(model)
+			self.save_path = "my_model_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
 		if self.num_gpus > 1:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
-
-		if "model_save_path" in config and config["model_save_path"] != "" and config["model_save_path"][-2:] == "pt":
-			self.save_path = config["model_save_path"]
-		print("You will save the model in the path: {}".format(self.save_path))
 
 		transform = transforms.Compose([
 			RandomFlip(),
@@ -110,17 +95,14 @@ class Train:
 
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True,drop_last=True,
-									   num_workers=1)
+									   shuffle=True,
+									   drop_last=True,num_workers=2)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True,drop_last=True,
-									   num_workers=1)
-		self.test_loader = DataLoader(self.test_dst,
-									  batch_size=4,
-									  shuffle=True,drop_last=True,
-									  num_workers=1)
-		if self.retrain == False:
+									   shuffle=True,
+									   drop_last=True,num_workers=2)
+
+		if self.retrain:
 			self.load_weights(self.save_path)
 
 
@@ -144,7 +126,7 @@ class Train:
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss().to(self.device)
+			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
 		loss_epoch = []
 		valid_accs = []
 		valid_ious = []
@@ -194,7 +176,7 @@ class Train:
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
 		losses = []
-		ioucomputer = IOU()
+		ioucomputer = IOU(self.num_classes)
 		self.model.eval()
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1)
@@ -214,13 +196,10 @@ class Train:
 				y_hat = torch.argmax(out, dim=1)
 				y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
 
-				pred = y_hat_onehot[:, train_ids, :, :]
-				target = y_one_hot[:, train_ids, :, :]
-
-				b_acc = pixel_acc(pred, target)
-				ioucomputer.UpdateIou(pred, target)
+				b_acc = pixel_acc(y_hat, y)
+				ioucomputer.UpdateIou(y_hat_onehot, y_one_hot)
 				# print(b_acc)
-				accs.append(b_acc.cpu().numpy())
+				accs.append(b_acc)
 
 		ious = np.array(ioucomputer.CalculateIou())
 		accs = np.array(accs)
@@ -235,13 +214,13 @@ class Train:
 		print("Saving Done!")
 
 	def load_weights(self,path):
-		print("Loading the parameters...............")
+		print("Loading the parameters")
 		self.model.load_state_dict(torch.load(path))
 		self.model.eval()
 
 
 if __name__ == "__main__":
-	config = load_config("aspp.yaml")
+	config = load_config("Unet_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 
