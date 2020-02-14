@@ -11,12 +11,12 @@ from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet
 from utils import *
 from utils import load_config
 from torch.utils.tensorboard import SummaryWriter
+from ASPP import Deeplab
 
 # from tqdm import tqdm
 
 import pdb
 
-CUDA_DIX = [0,1]
 class Test:
     def __init__(self,
                  config,
@@ -24,7 +24,7 @@ class Test:
                  train_path = "./train.csv",
                  valid_path = "./val.csv",
                 ):
-        self.save_path = 'my_model_UNet_BN.pt'
+        self.save_path = 'my_model_Deeplab_resnet50.pt'
         self.batch_size = config["batch_size"]
         self.epochs = config["epochs"]
         self.num_classes = config["num_classes"]
@@ -33,11 +33,15 @@ class Test:
         self.loss_method = config["loss_method"]
         self.save_best = config["save_best"]
         self.retrain = config["retrain"]
+        if "CUDA_DIX" in config:
+            self.CUDA_DIX = config["CUDA_DIX"]
+        else:
+            self.CUDA_DIX = [0]
         GPU = config["GPU"]
         img_shape = tuple(config["img_shape"])
         model = config["model"]
         if GPU:
-            self.gpus = CUDA_DIX
+            self.gpus = self.CUDA_DIX
 
         else:
             self.gpus =[]
@@ -49,10 +53,16 @@ class Test:
                     "base_fc":FCN,
                     "FCN":FCN_backbone,
                     "UNet_BN":UNet_BN,
-                    "Deeplabv3":deeplabv3_resnet50
+                    "Deeplabv3":deeplabv3_resnet50,
+                    "Deeplab": Deeplab
                     }
         self.model_name = model
-        self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
+        if model=="Deeplab":
+            self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
+                                                retrain_backbone=config["retrain_backbone"],
+                                                 backbone=config["backbone"]).to(self.device)
+        else:
+            self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
         if self.num_gpus > 1:
@@ -85,7 +95,7 @@ class Test:
 
     def test(self):
         valid_acc,valid_iou = self.check_accuracy(self.valid_loader)
-        print("valid accuracy: {} \tvalid ious {}".format(valid_acc,valid_iou))
+        print("valid accuracy: {} \t valid ious {}".format(valid_acc,valid_iou))
 
         # self.record.add_scalar("Validation miou", valid_miou.item(), epoch)
 
@@ -128,7 +138,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("Unet_config.yaml")
+    config = load_config("aspp.yaml")
     train = Test(config)
     train.test()
 

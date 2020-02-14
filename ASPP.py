@@ -38,7 +38,7 @@ class ASPP(nn.Module):
 			p: dropout rate
 		"""
 		super(ASPP,self).__init__()
-		self.branch = []
+		self.branch = nn.ModuleList([])
 		self.branch.append(nn.Conv2d(in_channel, h_channel, kernel_size=(1,1), stride=1,padding=0, dilation=1))
 		for i in range(len(rates)):
 			self.branch.append(nn.Sequential(
@@ -77,11 +77,11 @@ class ASPP(nn.Module):
 class BasicModel(nn.Module):
 	def __init__(self, num_classes,
 					use_torch_model=False,
-					retrain=True,
+					retrain_backbone=True,
 					backbone='resnet50'):
 		super(BasicModel,self).__init__()
 		self.num_classes = num_classes
-		self.retrain= retrain
+		self.retrain_backbone= retrain_backbone
 		self.backbone = backbone
 		self.use_torch_model = use_torch_model
 
@@ -142,12 +142,12 @@ class BasicModel(nn.Module):
 class Deeplab(BasicModel):
 	def __init__(self, num_classes,
 				use_torch_model=False,
-				retrain=True,
+				retrain_backbone=True,
 				backbone='resnet50'):
-		super(Deeplab, self).__init__(num_classes, use_torch_model, retrain, backbone)
+		super(Deeplab, self).__init__(num_classes, use_torch_model, retrain_backbone, backbone)
 		if use_torch_model:
 			self.encoder = self.load_encoder(backbone)
-			if retrain:
+			if retrain_backbone:
 				for params in self.encoder.parameters():
 					params.requires_grad = True
 			else:
@@ -202,6 +202,7 @@ class Deeplab(BasicModel):
 
 	def forward(self, x):
 		if self.use_torch_model:
+			# use pretrained resnet as backbone
 			x = self.encoder(x)
 			x = self.deconv1(x)
 			x = self.deconv2(x)
@@ -211,6 +212,7 @@ class Deeplab(BasicModel):
 			x =  self.aspp(x)
 			out = self.classifier(x)
 		else:
+			# skip connection
 			x1 = self.enc1(x)
 			x2 = self.enc2(x1)
 			x3 = self.enc3(x2)

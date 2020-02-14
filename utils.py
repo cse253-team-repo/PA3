@@ -50,7 +50,7 @@ def iou2(pred, target):
         Returns:
             ious: list of iou for each class
     """
-    ious = torch.zeros(pred.shape[1])
+    ious = torch.zeros(pred.shape[1]).cuda()
     intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
     union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
     ious[union!=0] = (intersection[union!=0] / union[union!=0])
