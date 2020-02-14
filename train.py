@@ -6,6 +6,8 @@ from torch.utils.data import DataLoader
 import numpy as np
 import torch.optim as optim
 import time
+from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50,DeepLabV3
+
 from tqdm import tqdm
 from utils import *
 from utils import load_config
@@ -18,6 +20,7 @@ CLASS_PIX=[742593219,86277776,348211930,10532667,14233504,
 22534680,3647030,9750011,274652891,18558778,
 62168130,25954782,3507436,125749610,5053833,
 4915128,4801188,1896224,8614510]
+
 CUDA_DIX = [0,1]
 class Train:
 	def __init__(self,
@@ -52,6 +55,7 @@ class Train:
 					"base_fc":FCN,
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
+					"Deeplabv3": deeplabv3_resnet50
 					}
 		self.model_name = model
 		if model=="FCN":
@@ -60,17 +64,18 @@ class Train:
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_weighted_{}.pt".format(model)
+			self.save_path = "my_model_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
 		if self.num_gpus > 1:
-			self.model = nn.DataParallel(self.model, device_ids=self.gpus)
+			self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
 
 		transform = transforms.Compose([
+			Resize((256,512)),
 			RandomFlip(),
-			RandomRescale(0.8,1.2),
-			RandomCrop(img_shape),
+			# RandomRescale(0.8,1.2),
+			# RandomCrop((256,512)),
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
 					  std=[0.229, 0.224, 0.225])
@@ -91,15 +96,15 @@ class Train:
 			len(self.test_dst)))
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True,
+									   shuffle=True,drop_last=True,
 									   num_workers=1)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True,
+									   shuffle=True,drop_last=True,
 									   num_workers=1)
 		self.test_loader = DataLoader(self.test_dst,
 									  batch_size=4,
-									  shuffle=True,
+									  shuffle=True,drop_last=True,
 									  num_workers=1)
 		if self.retrain == True:
 			self.load_weights(self.save_path)
@@ -117,17 +122,18 @@ class Train:
 
 	def train_on_batch(self, verbose=True, lr_decay=True):
 
-		class_pix = np.sqrt(CLASS_PIX)
-		weighted = 5 * class_pix.min() / class_pix
-		weighted = torch.tensor(weighted).float().to(self.device)
+		# class_pix = np.sqrt(CLASS_PIX)
+		# weighted = 5 * class_pix.min() / class_pix
+		# weighted = torch.tensor(weighted).float().to(self.device)
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 			if lr_decay:
-				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss(weight=weighted,ignore_index=-1).to(self.device)
+			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
 		loss_epoch = []
 		valid_accs = []
+		valid_ious = []
 		MAX = 0
 		for epoch in range(self.epochs):
 			loss_itr = []
@@ -136,9 +142,9 @@ class Train:
 				itr_start = time.time()
 				#print(train_x.shape)
 				#pdb.set_trace()
-				img = img.to(self.device)
-				train_y_one_hot = target.to(self.device)
-				train_y = label.to(self.device)
+				img = img.cuda()
+				train_y_one_hot = target.cuda()
+				train_y = label.cuda()
 
 				optimizer.zero_grad()
 				if self.model_name =="Deeplabv3":
@@ -150,7 +156,6 @@ class Train:
 				loss.backward()
 				optimizer.step()
 				loss_itr.append(loss.item())
-				self.record.add_scalar("Train_loss",loss.item(),i+epoch*len(self.train_loader))
 				itr_end = time.time()
 				if verbose:
 					print("Iterations: {} \t training loss: {} \t time: {}".format(i, loss_itr[-1], itr_end - itr_start))
@@ -160,20 +165,21 @@ class Train:
 			if lr_decay:
 				lr_sheduler.step(epoch)
 
-			valid_acc, valid_loss = self.check_accuracy(self.valid_loader, get_loss=True)
-			print("Epoch: {} \t valid loss: {} \t valid accuracy: {}".format(epoch, valid_loss, valid_acc))
-			self.record.add_scalar("Validation Acc", valid_acc.item(), epoch)
+			valid_acc, valid_loss, valid_iou = self.check_accuracy(self.valid_loader, get_loss=True)
+			print("Epoch: {} \t valid loss: {} \t valid accuracy: {} \t valid ious: {}".format(epoch, valid_loss, valid_acc,valid_iou))
+
 			if self.save_best:
-				if valid_acc > MAX:
+				if valid_iou > MAX:
+					print("Saving model")
 					self.save_weights(self.save_path)
-					MAX = valid_acc
+					MAX = valid_iou
 			valid_accs.append(valid_acc)
-
-
-			plot(loss_epoch, valid_accs)
+			valid_ious.append(valid_iou)
+			plot(epoch, name=self.model_name, valid_accs=valid_accs, valid_iou=valid_ious)
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
+		ious = []
 		losses = []
 		self.model.eval()
 		if self.loss_method == "cross-entropy":
@@ -191,13 +197,16 @@ class Train:
 				loss = criterio(out, y)
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out, dim=1)
-				# y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
+				y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
 				b_acc = pixel_acc(y_hat, y)
-				# b_ious = iou2(y_hat_onehot, y_one_hot)
+				b_ious = iou2(y_hat_onehot, y_one_hot)
 				accs.append(b_acc)
+				ious.append(b_ious)
+
+		ious = np.array(ious)
 		if get_loss:
-			return np.mean(accs), np.mean(losses)
-		return np.mean(accs)
+			return np.mean(accs), np.mean(losses), np.mean(ious[~np.isnan(ious)])
+		return np.mean(accs),np.mean(ious[~np.isnan(ious)])
 
 	def save_weights(self,path):
 		print("Saving the model ...")
@@ -208,9 +217,6 @@ class Train:
 		print("Loading the parameters")
 		self.model.load_state_dict(torch.load(path))
 		self.model.eval()
-
-
-
 
 
 if __name__ == "__main__":

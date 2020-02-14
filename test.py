@@ -7,7 +7,7 @@ import numpy as np
 import os
 from tqdm import tqdm
 import torch
-from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50
+from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50,DeepLabV3
 from utils import *
 from utils import load_config
 from torch.utils.tensorboard import SummaryWriter
@@ -24,7 +24,7 @@ class Test:
                  train_path = "./train.csv",
                  valid_path = "./val.csv",
                 ):
-        self.save_path = 'my_model_base_fc.pt'
+        self.save_path = 'my_model_UNet_BN.pt'
         self.batch_size = config["batch_size"]
         self.epochs = config["epochs"]
         self.num_classes = config["num_classes"]
@@ -71,6 +71,7 @@ class Test:
             len(self.valid_dst),
             len(self.test_dst)))
 
+        # self.new_val,_ = random_split(self.valid_dst,[10,len(self.valid_dst)-10])
         self.valid_loader = DataLoader(self.valid_dst,
                                        batch_size=1,
                                        shuffle=True,
@@ -114,8 +115,9 @@ class Test:
                 accs.append(b_acc)
                 ious.append(b_ious)
                 print('batch {}'.format(i))
-
-        return np.mean(accs),np.mean(ious)
+        accs = np.array(accs)
+        ious = np.array(ious)
+        return np.mean(accs),np.mean(ious[~np.isnan(ious)])
 
     def load_weights(self,path):
         print("Loading the parameters")
@@ -125,7 +127,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("base_fc_config.yaml")
+    config = load_config("Unet_config.yaml")
     train = Test(config)
     train.test()
 

@@ -91,10 +91,12 @@ class CenterCrop(object):
 
 class Resize(object):
     def __init__(self,arg):
-        self.transform = transforms.Resize(arg,Image.NEAREST)
+        self.transform_img = transforms.Resize(arg,Image.BILINEAR)
+        self.transform_label = transforms.Resize(arg,Image.NEAREST)
+
     def __call__(self, sample):
         img, label = sample
-        return self.transform(img),self.transform(label)
+        return self.transform_img(img),self.transform_label(label)
 
 class Normalize(object):
     def __init__(self,mean,std):
