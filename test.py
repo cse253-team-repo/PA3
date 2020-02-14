@@ -91,10 +91,10 @@ class Test:
 
     def check_accuracy(self, dataloader):
         accs = []
-        ious = []
         if os.path.exists('./result_images') == False:
             os.mkdir('./result_images')
         self.model.eval()
+        ioucomputer = IOU(self.num_classes)
         with torch.no_grad():
             for i, data in enumerate(dataloader):
                 x, y_one_hot, y = data
@@ -106,17 +106,21 @@ class Test:
                 else:
                     out = self.model(x)
 
-                y_hat = torch.argmax(out,dim=1)
+                y_hat = torch.argmax(out, dim=1)
                 visualize(y_hat,y,'./result_images/{}'.format(i))
-                y_hat_onehot = to_one_hot(y_hat,self.num_classes).to(self.device)
-                b_acc = pixel_acc(y_hat, y)
-                b_ious = iou2(y_hat_onehot, y_one_hot)
-                print(b_acc,b_ious)
+                y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
+
+                pred = y_hat_onehot[:, train_ids, :, :]
+                target = y_one_hot[:, train_ids, :, :]
+
+                b_acc = pixel_acc(pred, target)
+                ioucomputer.UpdateIou(pred, target)
+                print(b_acc)
                 accs.append(b_acc)
-                ious.append(b_ious)
                 print('batch {}'.format(i))
         accs = np.array(accs)
-        ious = np.array(ious)
+        ious = np.array(ioucomputer.CalculateIou())
+        print(ious)
         return np.mean(accs),np.mean(ious[~np.isnan(ious)])
 
     def load_weights(self,path):

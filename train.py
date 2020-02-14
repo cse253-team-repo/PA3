@@ -2,7 +2,7 @@ from models import UNet,UNet_BN, FCN_backbone
 from basic_fcn import FCN
 import torch.nn as nn
 from dataloader import *
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader,random_split
 import numpy as np
 import torch.optim as optim
 import time
@@ -10,7 +10,6 @@ from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet
 
 from tqdm import tqdm
 from utils import *
-from utils import load_config
 from torch.utils.tensorboard import SummaryWriter
 import yaml
 # from tqdm import tqdm
@@ -21,7 +20,7 @@ CLASS_PIX=[742593219,86277776,348211930,10532667,14233504,
 62168130,25954782,3507436,125749610,5053833,
 4915128,4801188,1896224,8614510]
 
-CUDA_DIX = [0,1]
+CUDA_DIX = [0,1,2]
 class Train:
 	def __init__(self,
 				 config,
@@ -64,7 +63,7 @@ class Train:
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_{}.pt".format(model)
+			self.save_path = "my_model_{}_34.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -72,10 +71,9 @@ class Train:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
 
 		transform = transforms.Compose([
-			Resize((256,512)),
 			RandomFlip(),
-			# RandomRescale(0.8,1.2),
-			# RandomCrop((256,512)),
+			RandomRescale(0.8,1.2),
+			RandomCrop(img_shape),
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
 					  std=[0.229, 0.224, 0.225])
@@ -94,6 +92,7 @@ class Train:
 			len(self.train_dst),
 			len(self.valid_dst),
 			len(self.test_dst)))
+
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,drop_last=True,
@@ -106,7 +105,7 @@ class Train:
 									  batch_size=4,
 									  shuffle=True,drop_last=True,
 									  num_workers=1)
-		if self.retrain == True:
+		if self.retrain:
 			self.load_weights(self.save_path)
 
 
@@ -130,7 +129,7 @@ class Train:
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
+			criterio = nn.CrossEntropyLoss().to(self.device)
 		loss_epoch = []
 		valid_accs = []
 		valid_ious = []
@@ -179,14 +178,15 @@ class Train:
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
-		ious = []
 		losses = []
+		ioucomputer = IOU()
 		self.model.eval()
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1)
 		with torch.no_grad():
 			for i, data in enumerate(dataloader):
 				x, y_one_hot, y = data
+
 				x = x.to(self.device)
 				y_one_hot = y_one_hot.to(self.device)
 				y = y.to(self.device)
@@ -198,12 +198,18 @@ class Train:
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out, dim=1)
 				y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
-				b_acc = pixel_acc(y_hat, y)
-				b_ious = iou2(y_hat_onehot, y_one_hot)
-				accs.append(b_acc)
-				ious.append(b_ious)
 
-		ious = np.array(ious)
+				pred = y_hat_onehot[:, train_ids, :, :]
+				target = y_one_hot[:, train_ids, :, :]
+
+				b_acc = pixel_acc(pred, target)
+				ioucomputer.UpdateIou(pred, target)
+				# print(b_acc)
+				accs.append(b_acc.cpu().numpy())
+
+		ious = np.array(ioucomputer.CalculateIou())
+		accs = np.array(accs)
+		print(ious)
 		if get_loss:
 			return np.mean(accs), np.mean(losses), np.mean(ious[~np.isnan(ious)])
 		return np.mean(accs),np.mean(ious[~np.isnan(ious)])
@@ -220,7 +226,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("base_fc_config.yaml")
+	config = load_config("Deeplabv3_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 
