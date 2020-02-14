@@ -20,7 +20,7 @@ CLASS_PIX=[742593219,86277776,348211930,10532667,14233504,
 62168130,25954782,3507436,125749610,5053833,
 4915128,4801188,1896224,8614510]
 
-CUDA_DIX = [0,1,2]
+CUDA_DIX = [0,1,2,3]
 class Train:
 	def __init__(self,
 				 config,
@@ -63,7 +63,7 @@ class Train:
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_{}_34.pt".format(model)
+			self.save_path = "my_model_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -95,16 +95,13 @@ class Train:
 
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True,drop_last=True,
-									   num_workers=1)
+									   shuffle=True,
+									   drop_last=True,num_workers=2)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True,drop_last=True,
-									   num_workers=1)
-		self.test_loader = DataLoader(self.test_dst,
-									  batch_size=4,
-									  shuffle=True,drop_last=True,
-									  num_workers=1)
+									   shuffle=True,
+									   drop_last=True,num_workers=2)
+
 		if self.retrain:
 			self.load_weights(self.save_path)
 
@@ -129,7 +126,7 @@ class Train:
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss().to(self.device)
+			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
 		loss_epoch = []
 		valid_accs = []
 		valid_ious = []
@@ -179,7 +176,7 @@ class Train:
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
 		losses = []
-		ioucomputer = IOU()
+		ioucomputer = IOU(self.num_classes)
 		self.model.eval()
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1)
@@ -199,13 +196,10 @@ class Train:
 				y_hat = torch.argmax(out, dim=1)
 				y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
 
-				pred = y_hat_onehot[:, train_ids, :, :]
-				target = y_one_hot[:, train_ids, :, :]
-
-				b_acc = pixel_acc(pred, target)
-				ioucomputer.UpdateIou(pred, target)
+				b_acc = pixel_acc(y_hat, y)
+				ioucomputer.UpdateIou(y_hat_onehot, y_one_hot)
 				# print(b_acc)
-				accs.append(b_acc.cpu().numpy())
+				accs.append(b_acc)
 
 		ious = np.array(ioucomputer.CalculateIou())
 		accs = np.array(accs)
@@ -226,7 +220,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("Deeplabv3_config.yaml")
+	config = load_config("Unet_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 

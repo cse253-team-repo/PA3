@@ -25,35 +25,6 @@ encoder_out_chnnel={
 			'vgg16_bn': 512,
 			'vgg19_bn': 512
 }
-class Loss:
-    def __init__(self, method="cross-entropy"):
-        """
-            Implement various loss function inside this class inclusing naive cross-entropy
-            and a loss weighting scheme.
-        """
-        if method == "cross-entropy":
-            self.loss = self.cross_entropy
-    def cross_entropy(self, y, target):
-        pass
-
-
-class WCELoss(nn.modules.loss._WeightedLoss):
-    def __init__(self, gamma=2, weight=None, size_average=None, ignore_index=-1,
-                 reduce=None, reduction='mean'):
-        super(WCELoss, self).__init__(weight, size_average, reduce, reduction)
-        self.weight = weight
-        self.ignore_index = ignore_index
-
-    def forward(self, pred, target):
-
-        pred = pred.contiguous().view(-1, pred.shape[-1])
-        log_prb = F.log_softmax(pred, dim=1)
-
-        # convert target to one-hot encoding
-        one_hot = torch.zeros_like(pred).scatter(1, target.view(-1, 1), 1)
-        loss = -(one_hot * log_prb).sum(dim=1)
-
-        return loss
 
 
 

@@ -59,8 +59,8 @@ def iou2(pred, target):
 
 class IOU:
     def __init__(self,n_class):
-        self.union = torch.zeros(n_class)
-        self.intersection = torch.zeros(n_class)
+        self.union = torch.zeros(n_class).cuda()
+        self.intersection = torch.zeros(n_class).cuda()
         self.n_class = n_class
     def UpdateIou(self,pred, target, output=True):
         """
@@ -77,7 +77,7 @@ class IOU:
         self.union += union
         self.intersection += intersection
         if output:
-            ious = torch.zeros(pred.shape[1])
+            ious = torch.zeros(pred.shape[1]).cuda()
             ious[union!=0] = (intersection[union!=0] / union[union!=0])
             ious[union==0] = float('nan')
             return ious.tolist()
@@ -86,7 +86,7 @@ class IOU:
             Calculate the total IOU.
             If the class is not present then output nan.
         """
-        ious = torch.zeros(self.n_class)
+        ious = torch.zeros(self.n_class).cuda()
         ious[self.union!=0] = (self.intersection[self.union!=0] / self.union[self.union!=0])
         ious[self.union==0] = float('nan')
         return ious.tolist()
