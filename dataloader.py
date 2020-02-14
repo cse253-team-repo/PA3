@@ -9,7 +9,7 @@ import torch.functional as F
 from PIL import Image
 from collections import namedtuple
 
-n_class    = 19
+n_class    = 34
 means     = np.array([103.939, 116.779, 123.68]) / 255. # mean of three channels in the order of BGR
 
 # a label and all meta information
@@ -108,14 +108,14 @@ class Normalize(object):
 class ToTensor(object):
     def __init__(self):
         self.transform = transforms.ToTensor()
-        self.id_to_trainId = {}
-        for label in labels_classes:
-            self.id_to_trainId[label.id]=label.trainId if label.trainId != 255 else -1
-        self.id_to_trainId_map_func = np.vectorize(self.id_to_trainId.get)
+        # self.id_to_trainId = {}
+        # for label in labels_classes:
+        #     self.id_to_trainId[label.id]=label.trainId if label.trainId != 255 else -1
+        # self.id_to_trainId_map_func = np.vectorize(self.id_to_trainId.get)
     def __call__(self, sample):
         img, label = sample
         label = np.array(label)
-        label = self.id_to_trainId_map_func(label)
+        # label = self.id_to_trainId_map_func(label)
         return self.transform(img), \
                torch.from_numpy(label.copy()).long()
 
