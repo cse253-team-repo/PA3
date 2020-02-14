@@ -4,7 +4,28 @@ import torch.nn.functional as F
 import torchvision
 from models import *
 import pdb
-
+pretrained_models = {
+            'resnext50':torchvision.models.resnext50_32x4d,
+            'resnext101':torchvision.models.resnext101_32x8d,
+			'resnet18': torchvision.models.resnet18,
+			'resnet34': torchvision.models.resnet34,
+			'resnet50': torchvision.models.resnet50,
+			'resnet101': torchvision.models.resnet101,
+			'vgg11_bn': torchvision.models.vgg11_bn,
+			'vgg16_bn': torchvision.models.vgg16_bn,
+			'vgg19_bn': torchvision.models.vgg19_bn
+		}
+encoder_out_chnnel={
+			'resnet18': 512,
+			'resnet34': 1024,
+			'resnet50': 2048,
+            'resnext50': 2048,
+			'resnet101': 2048,
+			'resnext101': 2048,
+			'vgg11_bn': 512,
+			'vgg16_bn': 512,
+			'vgg19_bn': 512
+}
 
 class ASPP(nn.Module):
 	def __init__(self, in_channel, out_channel, h_channel=128, rates=[6,12,18], pooling_method="average_pooling", p=0):
@@ -132,7 +153,33 @@ class Deeplab(BasicModel):
 			else:
 				for params in self.encoder.parameters():
 					params.requires_grad = False
-			self.classifier = nn.Conv2d(32, self.n_class, kernel_size=1)
+			self.deconv1 = nn.Sequential(
+							nn.ConvTranspose2d(encoder_out_chnnel[backbone], 512, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
+							nn.BatchNorm2d(512),
+							)
+
+			self.deconv2 = nn.Sequential(
+							nn.ConvTranspose2d(512, 256, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
+							nn.BatchNorm2d(256),
+							)
+
+			self.deconv3 = nn.Sequential(
+							nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
+							nn.BatchNorm2d(128),
+							)
+			self.deconv4 = nn.Sequential(
+							nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
+							nn.BatchNorm2d(64),
+							)
+
+			self.deconv5 = nn.Sequential(
+							nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
+							nn.BatchNorm2d(32),
+							)
+			self.aspp = ASPP(32, 32, h_channel=32)
+			self.classifier = nn.Conv2d(32, self.num_classes, kernel_size=1)
+
+
 		else:
 			self.enc1 = nn.Sequential(nn.Conv2d(3, 64, 3, padding=1), nn.ReLU(inplace=True),
 										nn.Conv2d(64, 64, 3, padding=1),
@@ -153,10 +200,16 @@ class Deeplab(BasicModel):
 			self.classifier = ASPP(128, self.num_classes, h_channel=self.num_classes)
 
 
-
 	def forward(self, x):
 		if self.use_torch_model:
-			raise ValueError("Not implement the version when using RESNET as backbone for deeplab v3")
+			x = self.encoder(x)
+			x = self.deconv1(x)
+			x = self.deconv2(x)
+			x = self.deconv3(x)
+			x = self.deconv4(x)
+			x = self.deconv5(x)
+			x =  self.aspp(x)
+			out = self.classifier(x)
 		else:
 			x1 = self.enc1(x)
 			x2 = self.enc2(x1)
@@ -180,6 +233,7 @@ class Deeplab(BasicModel):
 
 if __name__ == "__main__":
 	x = torch.randn(2,3,256, 512)
-	model = Deeplab(12)
+	model = Deeplab(12, use_torch_model=True)
+	print(model)
 	y = model(x)
 	print(y.shape)
