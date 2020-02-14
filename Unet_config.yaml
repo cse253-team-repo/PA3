@@ -1,11 +1,11 @@
 model: "UNet_BN"
 loss_method: "cross-entropy"
 opt_method: "Adam"
-batch_size: 16
-img_shape: [512,512]
+batch_size: 4
+img_shape: [800,800]
 epochs: 100
 num_classes: 19
 lr: 0.01
 GPU: True
 save_best: True
-retrain: False
+retrain: True
