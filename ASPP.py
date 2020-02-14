@@ -30,7 +30,7 @@ class ASPP(nn.Module):
 										nn.ReLU(inplace=True),
 										)
 		else:
-			raise ValueError(f"Not implement the pooling metho {pooling_method}")
+			raise ValueError(f"Not implement the pooling method {pooling_method}")
 
 	def forward(self, x):
 		"""
@@ -42,10 +42,6 @@ class ASPP(nn.Module):
 		branch_output.append(F.interpolate(self.pooling(x), size=x.shape[2:], mode='bilinear', align_corners=True))
 		x_conv = torch.cat(branch_output, dim=1)
 		return x_conv
-
-
-class Deeplabv3(nn.Module):
-	def __init__(self)
 
 
 

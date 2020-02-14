@@ -6,7 +6,7 @@ import json
 from PIL import Image
 from dataloader import labels_classes
 
-
+import pdb
 
 color_array = []
 for i in labels_classes:
@@ -20,8 +20,8 @@ def iou(pred, target):
     """
         Calculate IOU in a for each class; Assume data is one hot encoding
         Args:
-            pred: prediction label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
-            target: target label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+            pred: prediction label with one hot encoding; shape -- [n_batch, rows, cols, n_class]
+            target: target label with one hot encoding; shape -- [n_batch, rows, cols, n_class]
         Returns:
             ious: list of iou for each class
     """
@@ -50,12 +50,46 @@ def iou2(pred, target):
         Returns:
             ious: list of iou for each class
     """
-    ious = torch.zeros(pred.shape[1]).cuda()
+    ious = torch.zeros(pred.shape[1])
     intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
     union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
     ious[union!=0] = (intersection[union!=0] / union[union!=0])
     ious[union==0] = float('nan')
     return ious.tolist()
+
+class IOU:
+    def __init__(self,n_class):
+        self.union = torch.zeros(n_class)
+        self.intersection = torch.zeros(n_class)
+        self.n_class = n_class
+    def UpdateIou(self,pred, target, output=True):
+        """
+            Update the intersection and union arrays for each batch of data and return the ious for this batch.
+            Args:
+                pred: prediction label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+                target: target label with one hot encoding; shape -- [n_batch, n_class, rows, cols]
+            Returns:
+                ious: list of iou for each class
+        """
+        intersection = torch.sum(pred * target, dim=[0,2,3]) # intersection every class
+        union = torch.sum(pred, dim=[0,2,3]) + torch.sum(target, dim=[0,2,3]) - intersection
+        self.union += union
+        self.intersection += intersection
+        if output:
+            ious = torch.zeros(pred.shape[1])
+            ious[union!=0] = (intersection[union!=0] / union[union!=0])
+            ious[union==0] = float('nan')
+            return ious.tolist()
+    def CalculateIou(self):
+        """
+            Calculate the total IOU.
+            If the class is not present then output nan.
+        """
+        ious = torch.zeros(self.n_class)
+        ious[self.union!=0] = (self.intersection[self.union!=0] / self.union[self.union!=0])
+        ious[self.union==0] = float('nan')
+        return ious.tolist()
+
 
 def load_config(path):
     """
@@ -106,28 +140,20 @@ if __name__ == "__main__":
     h = w = 513
     pred = torch.eye(n_class)[torch.randint(0, n_class, (h*w,))].view(h,w,8)
     target = torch.eye(n_class)[torch.randint(0, n_class, (h*w,))].view(h,w,8)
-    """
-    pred = torch.tensor([[[ 0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-         [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-         [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]],
-        [[ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-         [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-         [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]]])
-    target = torch.tensor([[[ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-         [ 0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-         [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]],
-        [[ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-         [ 0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.],
-         [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.]]])
-    """
-    pred = pred.unsqueeze(0)
     target = target.unsqueeze(0)
+    pred = pred.unsqueeze(0)
     print(iou(pred, target))
+    #pdb.set_trace()
     start =time.time()
     out = iou2(pred.permute(0, 3, 1, 2), target.permute(0, 3, 1, 2))
     end = time.time()
+    out 
     print(out)
     print("time: {}".format(end - start))
+    myIOU = IOU(n_class)
+    out = myIOU.UpdateIou(pred.permute(0, 3, 1, 2), target.permute(0, 3, 1, 2))
+    print(out)
+    print(myIOU.CalculateIou())
     #print(pixel_acc(pred, target))
 '''
 if __name__ == "__main__":
