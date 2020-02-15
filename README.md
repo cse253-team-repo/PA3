@@ -2,6 +2,46 @@
 
 Semantic segmentation
 
+We implemented the following network architecture
+
+* FCN
+* UNet
+* ResNet+ASPP
+* UNet+ASPP
+* ResNet+decoder
+
+We utilized yaml file to store the highper parameter settings for each network. To run the corresponding network, please pass the correct yaml file to `load_config` function in `train.py/test.py`.  
+
+
+## ASPP module
+In model/ASPP.py, we implemented the Astrous Spatial Pyramid Pooling (AKA ASPP) with 2 versions. 
+
+* The first version is to use resnet as encoder and ASPP plus a upsampling as classifier. To use this version set `use_torch_model: True` in `config/aspp.yaml`. 
+* The second version is modefied based on our UNet architecture. We use skip connection and encoder-decoder architecture while utilizing ASPP in the decoder part. To use this version set `use_torch_model: False` in `config/aspp.yaml`.
+
+To train/test this network, please pass `aspp.yaml` to `load_config` in `train.py/test.py`. 
+
+To just test the shape test for this module, run:
+
+```bash
+python model/ASPP.py
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Unet bn
 [0.76558155 0.57691383 0.77113068 0.12833847 0.22157449 0.45102286
