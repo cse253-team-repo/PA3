@@ -62,7 +62,7 @@ class Test:
                                                 retrain_backbone=config["retrain_backbone"],
                                                  backbone=config["backbone"]).to(self.device)
         else:
-            self.save_path = "my_model_weighted_{}.pt".format(model)
+            self.save_path = "my_model_{}.pt".format(model)
             self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -139,7 +139,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("base_fc_config.yaml")
+    config = load_config("Unet_config.yaml")
     print(config)
     train = Test(config)
     train.test()

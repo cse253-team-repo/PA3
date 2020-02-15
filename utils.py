@@ -10,9 +10,7 @@ import pdb
 
 color_array = []
 for i in labels_classes:
-        if i.ignoreInEval == False:
-            color_array.append(i.color)
-        else:
+        if i.trainId != 255:
             color_array.append(i.color)
 color_array = np.array(color_array)
 
