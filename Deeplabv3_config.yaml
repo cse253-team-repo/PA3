@@ -5,6 +5,7 @@ batch_size: 8
 img_shape: [800,800]
 epochs: 100
 num_classes: 19
+CUDA_DIX: [0,1]
 lr: 0.001
 GPU: True
 backbone: "resnet50"

@@ -63,7 +63,7 @@ class Train:
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_{}.pt".format(model)
+			self.save_path = "my_model_weighted_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -118,9 +118,9 @@ class Train:
 
 	def train_on_batch(self, verbose=True, lr_decay=True):
 
-		# class_pix = np.sqrt(CLASS_PIX)
-		# weighted = 5 * class_pix.min() / class_pix
-		# weighted = torch.tensor(weighted).float().to(self.device)
+		class_pix = np.sqrt(CLASS_PIX)
+		weighted = 5 * class_pix.min() / class_pix
+		weighted = torch.tensor(weighted).float().to(self.device)
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 			if lr_decay:
@@ -220,7 +220,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("Unet_config.yaml")
+	config = load_config("base_fc_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 

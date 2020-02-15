@@ -24,7 +24,6 @@ class Test:
                  train_path = "./train.csv",
                  valid_path = "./val.csv",
                 ):
-        self.save_path = 'my_model_Deeplab_resnet50.pt'
         self.batch_size = config["batch_size"]
         self.epochs = config["epochs"]
         self.num_classes = config["num_classes"]
@@ -57,11 +56,13 @@ class Test:
                     "Deeplab": Deeplab
                     }
         self.model_name = model
+
         if model=="Deeplab":
             self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
                                                 retrain_backbone=config["retrain_backbone"],
                                                  backbone=config["backbone"]).to(self.device)
         else:
+            self.save_path = "my_model_weighted_{}.pt".format(model)
             self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -90,7 +91,7 @@ class Test:
                                       batch_size=1,
                                       shuffle=True,
                                       num_workers=1)
-
+        print(self.save_path)
         self.load_weights(self.save_path)
 
     def test(self):
@@ -138,7 +139,8 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("aspp.yaml")
+    config = load_config("base_fc_config.yaml")
+    print(config)
     train = Test(config)
     train.test()
 
