@@ -1,5 +1,10 @@
 from model.models import *
-
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+from models import *
+import pdb
 pretrained_models = {
             'resnext50':torchvision.models.resnext50_32x4d,
             'resnext101':torchvision.models.resnext101_32x8d,
@@ -132,6 +137,9 @@ class BasicModel(nn.Module):
 
 
 
+
+
+
 class Deeplab(BasicModel):
 	def __init__(self, num_classes,
 				use_torch_model=False,
@@ -146,32 +154,7 @@ class Deeplab(BasicModel):
 			else:
 				for params in self.encoder.parameters():
 					params.requires_grad = False
-			self.deconv1 = nn.Sequential(
-							nn.ConvTranspose2d(encoder_out_chnnel[backbone], 512, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
-							nn.BatchNorm2d(512),
-							)
-
-			self.deconv2 = nn.Sequential(
-							nn.ConvTranspose2d(512, 256, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
-							nn.BatchNorm2d(256),
-							)
-
-			self.deconv3 = nn.Sequential(
-							nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
-							nn.BatchNorm2d(128),
-							)
-			self.deconv4 = nn.Sequential(
-							nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
-							nn.BatchNorm2d(64),
-							)
-
-			self.deconv5 = nn.Sequential(
-							nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, dilation=1, output_padding=1),
-							nn.BatchNorm2d(32),
-							)
-			self.aspp = ASPP(32, 32, h_channel=32)
-			self.classifier = nn.Conv2d(32, self.num_classes, kernel_size=1)
-
+			self.aspp = ASPP(encoder_out_chnnel[backbone], num_classes, h_channel=256)
 
 		else:
 			self.enc1 = nn.Sequential(nn.Conv2d(3, 64, 3, padding=1), nn.ReLU(inplace=True),
@@ -195,16 +178,12 @@ class Deeplab(BasicModel):
 
 	def forward(self, x):
 		if self.use_torch_model:
+			in_shape = x.shape[2:]
 			# use pretrained resnet as backbone
 			x = self.encoder(x)
-			x = self.deconv1(x)
-			x = self.deconv2(x)
-			x = self.deconv3(x)
-			x = self.deconv4(x)
-			x = self.deconv5(x)
 			#pdb.set_trace()
 			x =  self.aspp(x)
-			out = self.classifier(x)
+			out = F.interpolate(x, size=in_shape, mode="bilinear", align_corners=True)
 		else:
 			# skip connection
 			x1 = self.enc1(x)
@@ -223,33 +202,6 @@ class Deeplab(BasicModel):
 			out = self.classifier(torch.cat([x1, x12], dim=1))
 		return out
 
-
-class Deeplab_yxy(BasicModel):
-	def __init__(self, num_classes,
-				use_torch_model=True,
-				retrain_backbone=True,
-				backbone='resnet50'):
-		super(Deeplab_yxy, self).__init__(num_classes, use_torch_model, retrain_backbone, backbone)
-		if use_torch_model:
-			self.encoder = self.load_encoder(backbone)
-			if retrain_backbone:
-				for params in self.encoder.parameters():
-					params.requires_grad = True
-			else:
-				for params in self.encoder.parameters():
-					params.requires_grad = False
-
-			self.aspp = ASPP(32, 32, h_channel=32)
-			self.classifier = nn.Conv2d(32, self.num_classes, kernel_size=1)
-
-
-	def forward(self, x):
-		input_shape = x.shape
-		x = self.encoder(x)
-		x =  self.aspp(x)
-		x = self.classifier(x)
-		out = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
-		return out
 
 
 

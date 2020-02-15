@@ -17,7 +17,7 @@ CLASS_PIX=[742593219,86277776,348211930,10532667,14233504,
 62168130,25954782,3507436,125749610,5053833,
 4915128,4801188,1896224,8614510]
 
-CUDA_DIX = [0,1,2,3]
+
 class Train:
 	def __init__(self,
 				 config,
@@ -41,10 +41,8 @@ class Train:
 		GPU = config["GPU"]
 		img_shape = tuple(config["img_shape"])
 		model = config["model"]
-
 		if GPU:
 			self.gpus = self.CUDA_DIX
-
 		else:
 			self.gpus =[]
 		self.record = SummaryWriter('runs/{}_{}'.format(model,time.time()))
@@ -125,6 +123,11 @@ class Train:
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
 	def count_weight(self):
+		"""
+			Count the frequency of each class for the weights for the weighted loss function. 
+			Returns: 
+				clss_count: frequency of all the classes in the training data.
+		"""
 		class_count = [0]*self.num_classes
 		for i, (img, target, label) in enumerate(tqdm(self.train_loader)):
 			train_y = label.to(self.device)
@@ -191,7 +194,7 @@ class Train:
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
-		losses = []
+		losses = []	
 		ioucomputer = IOU(self.num_classes)
 		self.model.eval()
 		if self.loss_method == "cross-entropy":
@@ -216,7 +219,6 @@ class Train:
 				ioucomputer.UpdateIou(y_hat_onehot, y_one_hot)
 				# print(b_acc)
 				accs.append(b_acc)
-
 		ious = np.array(ioucomputer.CalculateIou())
 		accs = np.array(accs)
 		print(ious)
