@@ -13,7 +13,7 @@ from utils import load_config
 from torch.utils.tensorboard import SummaryWriter
 from ASPP import Deeplab
 
-# from tqdm import tqdm
+from tqdm import tqdm
 
 import pdb
 
@@ -36,6 +36,10 @@ class Test:
             self.CUDA_DIX = config["CUDA_DIX"]
         else:
             self.CUDA_DIX = [0]
+        if "visualize" in config:
+            self.visualize = config["visualize"]
+        else:
+            self.visualize = True
         GPU = config["GPU"]
         img_shape = tuple(config["img_shape"])
         model = config["model"]
@@ -107,7 +111,7 @@ class Test:
         self.model.eval()
         ioucomputer = IOU(self.num_classes)
         with torch.no_grad():
-            for i, data in enumerate(dataloader):
+            for i, data in tqdm(enumerate(dataloader)):
                 x, y_one_hot, y = data
                 x = x.to(self.device)
                 y_one_hot = y_one_hot.to(self.device)
@@ -118,7 +122,8 @@ class Test:
                     out = self.model(x)
 
                 y_hat = torch.argmax(out, dim=1)
-                visualize(y_hat,y,'./result_images/{}'.format(i))
+                if self.visualize:
+                    visualize(y_hat,y,'./result_images/{}'.format(i))
                 y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
 
                 b_acc = pixel_acc(y_hat, y)

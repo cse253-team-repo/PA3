@@ -1,6 +1,5 @@
 from models import UNet,UNet_BN, FCN_backbone
 from basic_fcn import FCN
-from ASPP import Deeplab_yxy
 import torch.nn as nn
 from dataloader import *
 from torch.utils.data import DataLoader,random_split
@@ -38,12 +37,16 @@ class Train:
 		self.loss_method = config["loss_method"]
 		self.save_best = config["save_best"]
 		self.retrain = config["retrain"]
+		if "CUDA_DIX" in config:
+			self.CUDA_DIX = config["CUDA_DIX"]
+		else:
+			self.CUDA_DIX = [0]
 		GPU = config["GPU"]
 		img_shape = tuple(config["img_shape"])
 		model = config["model"]
 
 		if GPU:
-			self.gpus = CUDA_DIX
+			self.gpus = self.CUDA_DIX
 
 		else:
 			self.gpus =[]
@@ -56,6 +59,7 @@ class Train:
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
 					"Deeplabv3": deeplabv3_resnet50,
+					"Deeplab": Deeplab,
 					"Deeplab_yxy": Deeplab_yxy
 					}
 		self.model_name = model
@@ -64,6 +68,12 @@ class Train:
 			self.save_path = "my_model_{}_{}.pt".format(model, backbone)
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
+		if model=="Deeplab":
+			backbone = config["backbone"]
+			self.save_path = "my_model_{}".format(model) + ("_"+backbone if config["use_torch_model"] else "") +".pt"
+			self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
+												retrain_backbone=config["retrain_backbone"],
+												 backbone=backbone).to(self.device)
 		else:
 			self.save_path = "my_model_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
@@ -71,6 +81,10 @@ class Train:
 
 		if self.num_gpus > 1:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
+
+		if "model_save_path" in config and config["model_save_path"] != "" and config["model_save_path"][-2:] == "pt":
+			self.save_path = config["model_save_path"]
+		print("You will save the model in the path: {}".format(self.save_path))
 
 		transform = transforms.Compose([
 			RandomFlip(),
@@ -97,14 +111,17 @@ class Train:
 
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True,
-									   drop_last=True,num_workers=2)
+									   shuffle=True,drop_last=True,
+									   num_workers=2)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
-									   shuffle=True,
-									   drop_last=True,num_workers=2)
-
-		if self.retrain:
+									   shuffle=True,drop_last=True,
+									   num_workers=2)
+		self.test_loader = DataLoader(self.test_dst,
+									  batch_size=4,
+									  shuffle=True,drop_last=True,
+									  num_workers=2)
+		if self.retrain == False:
 			self.load_weights(self.save_path)
 
 
@@ -216,13 +233,13 @@ class Train:
 		print("Saving Done!")
 
 	def load_weights(self,path):
-		print("Loading the parameters")
+		print("Loading the parameters...............")
 		self.model.load_state_dict(torch.load(path))
 		self.model.eval()
 
 
 if __name__ == "__main__":
-	config = load_config("FCN_config.yaml")
+	config = load_config("Unet_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 

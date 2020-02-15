@@ -206,6 +206,7 @@ class Deeplab(BasicModel):
 			x = self.deconv3(x)
 			x = self.deconv4(x)
 			x = self.deconv5(x)
+			#pdb.set_trace()
 			x =  self.aspp(x)
 			out = self.classifier(x)
 		else:
