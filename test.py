@@ -1,21 +1,14 @@
-from models import UNet,UNet_BN, FCN_backbone
-from basic_fcn import FCN
-import torch.nn as nn
-from dataloader import *
-from torch.utils.data import DataLoader,random_split
-import numpy as np
 import os
-from tqdm import tqdm
-import torch
-from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50,DeepLabV3
-from utils import *
-from utils import load_config
-from torch.utils.tensorboard import SummaryWriter
-from ASPP import Deeplab
 
+import torch.nn as nn
+from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 
-import pdb
+from model.ASPP import Deeplab
+from model.basic_fcn import FCN
+from model.models import UNet, UNet_BN, FCN_backbone
+from utils.dataloader import *
+from utils.utils import *
 
 class Test:
     def __init__(self,

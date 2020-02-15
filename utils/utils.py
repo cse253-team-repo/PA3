@@ -1,12 +1,12 @@
+import json
+import time
+
+import numpy as np
 import torch
 import yaml
-import time
-import numpy as np
-import json
 from PIL import Image
-from dataloader import labels_classes
 
-import pdb
+from utils.dataloader import labels_classes
 
 color_array = []
 for i in labels_classes:

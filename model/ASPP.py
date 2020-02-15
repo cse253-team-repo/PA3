@@ -1,9 +1,5 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
-from models import *
-import pdb
+from model.models import *
+
 pretrained_models = {
             'resnext50':torchvision.models.resnext50_32x4d,
             'resnext101':torchvision.models.resnext101_32x8d,

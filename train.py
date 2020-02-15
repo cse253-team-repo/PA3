@@ -1,20 +1,17 @@
-from models import UNet,UNet_BN, FCN_backbone
-from basic_fcn import FCN
 import torch.nn as nn
-from dataloader import *
-from torch.utils.data import DataLoader,random_split
-import numpy as np
 import torch.optim as optim
-import time
-from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50,DeepLabV3
-
-from tqdm import tqdm
-from utils import *
 from torch.utils.tensorboard import SummaryWriter
-import yaml
+from torchvision.models.segmentation import deeplabv3_resnet50
+from tqdm import tqdm
+import time
+from model.ASPP import Deeplab_yxy, Deeplab
+from model.basic_fcn import FCN
+from model.models import UNet, UNet_BN, FCN_backbone
+from utils.dataloader import *
+from utils.utils import *
+
 # from tqdm import tqdm
 
-import pdb
 CLASS_PIX=[742593219,86277776,348211930,10532667,14233504,
 22534680,3647030,9750011,274652891,18558778,
 62168130,25954782,3507436,125749610,5053833,
