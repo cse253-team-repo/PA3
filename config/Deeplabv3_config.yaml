@@ -11,3 +11,4 @@ GPU: True
 backbone: "resnet50"
 save_best: True
 retrain: True
+CUDA_DIX: [0, 1] # specify the GPU to use
