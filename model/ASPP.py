@@ -204,33 +204,6 @@ class Deeplab(BasicModel):
 
 
 
-class Deeplab_yxy(BasicModel):
-	def __init__(self, num_classes,
-				use_torch_model=True,
-				retrain_backbone=True,
-				backbone='resnet50'):
-		super(Deeplab_yxy, self).__init__(num_classes, use_torch_model, retrain_backbone, backbone)
-		if use_torch_model:
-			self.encoder = self.load_encoder(backbone)
-			if retrain_backbone:
-				for params in self.encoder.parameters():
-					params.requires_grad = True
-			else:
-				for params in self.encoder.parameters():
-					params.requires_grad = False
-
-			self.aspp = ASPP(32, 32, h_channel=32)
-			self.classifier = nn.Conv2d(32, self.num_classes, kernel_size=1)
-
-
-	def forward(self, x):
-		input_shape = x.shape
-		x = self.encoder(x)
-		x =  self.aspp(x)
-		x = self.classifier(x)
-		out = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
-		return out
-		
 
 if __name__ == "__main__":
 	x = torch.randn(2,3,256, 512)
