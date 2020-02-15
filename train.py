@@ -65,14 +65,14 @@ class Train:
 			self.save_path = "my_model_{}_{}.pt".format(model, backbone)
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
-		if model=="Deeplab":
+		elif model=="Deeplab":
 			backbone = config["backbone"]
 			self.save_path = "my_model_{}".format(model) + ("_"+backbone if config["use_torch_model"] else "") +".pt"
 			self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
 												retrain_backbone=config["retrain_backbone"],
 												 backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_{}.pt".format(model)
+			self.save_path = "my_model_weighted_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -119,7 +119,7 @@ class Train:
 									  shuffle=True,drop_last=True,
 									  num_workers=2)
 		if self.retrain == False:
-			self.load_weights(self.save_path)
+			self.load_weights("my_model_base_fc.pt")
 
 
 
@@ -134,15 +134,15 @@ class Train:
 
 	def train_on_batch(self, verbose=True, lr_decay=True):
 
-		# class_pix = np.sqrt(CLASS_PIX)
-		# weighted = 5 * class_pix.min() / class_pix
-		# weighted = torch.tensor(weighted).float().to(self.device)
+		class_pix = np.sqrt(CLASS_PIX)
+		weighted = 5 * class_pix.min() / class_pix
+		weighted = torch.tensor(weighted).float().to(self.device)
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
+			criterio = nn.CrossEntropyLoss(ignore_index=-1,weight=weighted).to(self.device)
 		loss_epoch = []
 		valid_accs = []
 		valid_ious = []
@@ -236,7 +236,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("Unet_config.yaml")
+	config = load_config("config/base_fc_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 

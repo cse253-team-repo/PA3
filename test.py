@@ -53,8 +53,12 @@ class Test:
                     "Deeplab": Deeplab
                     }
         self.model_name = model
-
-        if model=="Deeplab":
+        if model == "FCN":
+            backbone = config["backbone"]
+            self.save_path = "my_model_{}_{}.pt".format(model, backbone)
+            self.model = networks[self.model_name](num_classes=self.num_classes,
+                                                   backbone=backbone).to(self.device)
+        elif model=="Deeplab":
             self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
                                                 retrain_backbone=config["retrain_backbone"],
                                                  backbone=config["backbone"]).to(self.device)
@@ -137,7 +141,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("Unet_config.yaml")
+    config = load_config("config/Deeplabv3_config.yaml")
     print(config)
     train = Test(config)
     train.test()

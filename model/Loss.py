@@ -38,9 +38,11 @@ class WCELoss(nn.modules.loss._WeightedLoss):
         pred = pred.contiguous().view(n, c, 1, -1)
         target = target.contiguous().view(n, 1, -1)
         log_prb = F.log_softmax(pred, dim=1)
+        print(pred.shape,target.shape)
 
-        one_hot = torch.zeros_like(pred).scatter(1, target.view(-1, 1), 1)
-        loss = -(one_hot * log_prb).sum(dim=1)
+        one_hot = torch.zeros_like(log_prb)
+        one_hot = one_hot.scatter(1, target, 1)
+        loss = -(self.weight*one_hot * log_prb).sum(dim=1)
 
         return loss
 
