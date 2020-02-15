@@ -41,10 +41,8 @@ class Train:
 		GPU = config["GPU"]
 		img_shape = tuple(config["img_shape"])
 		model = config["model"]
-
 		if GPU:
 			self.gpus = self.CUDA_DIX
-
 		else:
 			self.gpus =[]
 		self.record = SummaryWriter('runs/{}_{}'.format(model,time.time()))
@@ -125,6 +123,11 @@ class Train:
 
 		#self.iterations = int(len(self.train_dst) / batch_size)
 	def count_weight(self):
+		"""
+			Count the frequency of each class for the weights for the weighted loss function. 
+			Returns: 
+				clss_count: frequency of all the classes in the training data.
+		"""
 		class_count = [0]*self.num_classes
 		for i, (img, target, label) in enumerate(tqdm(self.train_loader)):
 			train_y = label.to(self.device)
