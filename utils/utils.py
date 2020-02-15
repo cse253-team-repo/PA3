@@ -122,8 +122,9 @@ def visualize(pred, label,filename):
     pred_img.save(filename+'pred.jpg')
     label_img.save(filename+'label.jpg')
 
-def plot(loss_epoch, name, valid_accs, valid_iou):
-    curve = {"train_loss": loss_epoch,
+def plot(epoch, loss_epoch, name, valid_accs, valid_iou):
+    curve = {"epoch": epoch,
+             "train_loss": loss_epoch,
              "valid_accs": valid_accs,
              "valid_ious": valid_iou}
     with open("curves_{}.json".format(name), 'w') as f:

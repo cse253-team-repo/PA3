@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from models import *
+from model.models import *
 import pdb
 pretrained_models = {
             'resnext50':torchvision.models.resnext50_32x4d,

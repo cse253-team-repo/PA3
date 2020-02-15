@@ -4,7 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 import time
-from model.ASPP import Deeplab_yxy, Deeplab
+from model.ASPP import Deeplab
 from model.basic_fcn import FCN
 from model.models import UNet, UNet_BN, FCN_backbone
 from utils.dataloader import *
@@ -55,7 +55,6 @@ class Train:
 					"UNet_BN":UNet_BN,
 					"Deeplabv3": deeplabv3_resnet50,
 					"Deeplab": Deeplab,
-					"Deeplab_yxy": Deeplab_yxy
 					}
 		self.model_name = model
 		if model=="FCN":
@@ -116,7 +115,7 @@ class Train:
 									  batch_size=4,
 									  shuffle=True,drop_last=True,
 									  num_workers=2)
-		if self.retrain == False:
+		if self.retrain == True:
 			self.load_weights(self.save_path)
 
 
@@ -190,7 +189,7 @@ class Train:
 					MAX = valid_iou
 			valid_accs.append(valid_acc)
 			valid_ious.append(valid_iou)
-			plot(epoch, name=self.model_name, valid_accs=valid_accs, valid_iou=valid_ious)
+			plot(epoch, loss_epoch=loss_epoch, name=self.model_name, valid_accs=valid_accs, valid_iou=valid_ious)
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
@@ -238,7 +237,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("Unet_config.yaml")
+	config = load_config("config/aspp.yaml")
 	train = Train(config)
 	train.train_on_batch()
 
