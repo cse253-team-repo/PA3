@@ -7,13 +7,23 @@ We implemented the following network architecture
 * FCN
 * UNet
 * ResNet+ASPP
-* UNet+ASPP
+* UNet (Skip connection) + ASPP
 * ResNet+decoder
 
-We utilized yaml file to store the highper parameter settings for each network. To run the corresponding network, please pass the correct yaml file to `load_config` function in `train.py/test.py`.  
+We utilized yaml file to store the hyperparameter settings for each network. To run the corresponding network, please pass the correct yaml file to `load_config` function in `train.py/test.py`.  
+
+## Train the model
+
+
+
+## Test the model
+
+
+
 
 
 ## ASPP module
+
 In model/ASPP.py, we implemented the Astrous Spatial Pyramid Pooling (AKA ASPP) with 2 versions. 
 
 * The first version is to use resnet as encoder and ASPP plus a upsampling as classifier. To use this version set `use_torch_model: True` in `config/aspp.yaml`. 
@@ -26,6 +36,8 @@ To just test the shape test for this module, run:
 ```bash
 python model/ASPP.py
 ```
+
+
 
 
 
