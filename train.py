@@ -1,26 +1,23 @@
-from models import UNet,UNet_BN, FCN_backbone
-from basic_fcn import FCN
 import torch.nn as nn
-from dataloader import *
-from torch.utils.data import DataLoader,random_split
-import numpy as np
 import torch.optim as optim
-import time
-from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50,DeepLabV3
-from ASPP import Deeplab
-from tqdm import tqdm
-from utils import *
 from torch.utils.tensorboard import SummaryWriter
-import yaml
+from torchvision.models.segmentation import deeplabv3_resnet50
+from tqdm import tqdm
+import time
+from model.ASPP import Deeplab_yxy, Deeplab
+from model.basic_fcn import FCN
+from model.models import UNet, UNet_BN, FCN_backbone
+from utils.dataloader import *
+from utils.utils import *
+
 # from tqdm import tqdm
 
-import pdb
 CLASS_PIX=[742593219,86277776,348211930,10532667,14233504,
 22534680,3647030,9750011,274652891,18558778,
 62168130,25954782,3507436,125749610,5053833,
 4915128,4801188,1896224,8614510]
 
-
+CUDA_DIX = [0,1,2,3]
 class Train:
 	def __init__(self,
 				 config,
@@ -59,7 +56,8 @@ class Train:
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
 					"Deeplabv3": deeplabv3_resnet50,
-					"Deeplab": Deeplab
+					"Deeplab": Deeplab,
+					"Deeplab_yxy": Deeplab_yxy
 					}
 		self.model_name = model
 		if model=="FCN":
@@ -74,7 +72,7 @@ class Train:
 												retrain_backbone=config["retrain_backbone"],
 												 backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_{}_34.pt".format(model)
+			self.save_path = "my_model_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -213,6 +211,7 @@ class Train:
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out, dim=1)
 				y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
+
 				b_acc = pixel_acc(y_hat, y)
 				ioucomputer.UpdateIou(y_hat_onehot, y_one_hot)
 				# print(b_acc)
@@ -236,7 +235,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("aspp.yaml")
+	config = load_config("Unet_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 

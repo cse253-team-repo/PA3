@@ -1,21 +1,14 @@
-from models import UNet,UNet_BN, FCN_backbone
-from basic_fcn import FCN
-import torch.nn as nn
-from dataloader import *
-from torch.utils.data import DataLoader,random_split
-import numpy as np
 import os
-from tqdm import tqdm
-import torch
-from torchvision.models.segmentation import deeplabv3_resnet101,deeplabv3_resnet50,DeepLabV3
-from utils import *
-from utils import load_config
-from torch.utils.tensorboard import SummaryWriter
-from ASPP import Deeplab
 
+import torch.nn as nn
+from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 
-import pdb
+from model.ASPP import Deeplab
+from model.basic_fcn import FCN
+from model.models import UNet, UNet_BN, FCN_backbone
+from utils.dataloader import *
+from utils.utils import *
 
 class Test:
     def __init__(self,
@@ -24,7 +17,6 @@ class Test:
                  train_path = "./train.csv",
                  valid_path = "./val.csv",
                 ):
-        self.save_path = 'my_model_Deeplab_resnet50.pt'
         self.batch_size = config["batch_size"]
         self.epochs = config["epochs"]
         self.num_classes = config["num_classes"]
@@ -61,11 +53,13 @@ class Test:
                     "Deeplab": Deeplab
                     }
         self.model_name = model
+
         if model=="Deeplab":
             self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
                                                 retrain_backbone=config["retrain_backbone"],
                                                  backbone=config["backbone"]).to(self.device)
         else:
+            self.save_path = "my_model_{}.pt".format(model)
             self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
@@ -94,7 +88,7 @@ class Test:
                                       batch_size=1,
                                       shuffle=True,
                                       num_workers=1)
-
+        print(self.save_path)
         self.load_weights(self.save_path)
 
     def test(self):
@@ -143,7 +137,8 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("aspp.yaml")
+    config = load_config("Unet_config.yaml")
+    print(config)
     train = Test(config)
     train.test()
 
