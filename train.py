@@ -144,7 +144,7 @@ class Train:
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss().to(self.device)
+			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
 		loss_epoch = []
 		valid_accs = []
 		valid_ious = []
@@ -193,7 +193,7 @@ class Train:
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		accs = []
-		losses = []
+		losses = []	
 		ioucomputer = IOU(self.num_classes)
 		self.model.eval()
 		if self.loss_method == "cross-entropy":
@@ -217,7 +217,6 @@ class Train:
 				ioucomputer.UpdateIou(y_hat_onehot, y_one_hot)
 				# print(b_acc)
 				accs.append(b_acc)
-
 		ious = np.array(ioucomputer.CalculateIou())
 		accs = np.array(accs)
 		print(ious)
