@@ -113,6 +113,13 @@ def pixel_acc(y_hat, y):
     return correct / N
 
 def visualize(pred, label,filename):
+    """
+        Convert Pytorch tensors to rgb images
+        Args:
+            pred: prediction label
+            label: one_hot label
+            filename: the name of the images to be saved
+    """
 
     pred_img = color_array[pred.detach().cpu().numpy()] # batch_size, h, w, 3
     label_img = color_array[label.detach().cpu().numpy()]
@@ -123,6 +130,15 @@ def visualize(pred, label,filename):
     label_img.save(filename+'label.jpg')
 
 def plot(epoch, loss_epoch, name, valid_accs, valid_iou):
+    """
+        Save the training curves to a json file
+        Args:
+            epoch: current epoch
+            loss_epoch: training loss curve
+            name: model name
+            valid_accs: validation accuracy
+            valid_iou: validation iou
+    """
     curve = {"epoch": epoch,
              "train_loss": loss_epoch,
              "valid_accs": valid_accs,
@@ -132,6 +148,12 @@ def plot(epoch, loss_epoch, name, valid_accs, valid_iou):
 
 
 def to_one_hot(label,num_class):
+    """
+        Convert label to one_hot tensor
+        Args:
+            label: ground truth class label
+            num_classed: number of the classes in total
+    """
     label_one_hot = torch.eye(num_class)[label]
     return label_one_hot.permute([0,3,1,2])
 

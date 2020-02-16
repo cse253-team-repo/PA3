@@ -136,7 +136,11 @@ class Train:
 		print(class_count)
 
 	def train_on_batch(self, verbose=True, lr_decay=True):
-
+		"""
+			Perform minibatch gradient descent
+			Returns:
+				the trained model with the best validation accuracy
+		"""
 		# class_pix = np.sqrt(CLASS_PIX)
 		# weighted = 5 * class_pix.min() / class_pix
 		# weighted = torch.tensor(weighted).float().to(self.device)
@@ -193,6 +197,11 @@ class Train:
 			plot(epoch, loss_epoch=loss_epoch, name=self.model_name, valid_accs=valid_accs, valid_iou=valid_ious)
 
 	def check_accuracy(self, dataloader, get_loss=True):
+		"""
+			Compute the validation accuracy
+			return:
+				validation accuracy
+		"""
 		accs = []
 		losses = []	
 		ioucomputer = IOU(self.num_classes)
@@ -227,11 +236,17 @@ class Train:
 		return np.mean(accs),np.mean(ious[~np.isnan(ious)])
 
 	def save_weights(self,path):
+		"""
+			Save the weights of trained model
+		"""
 		print("Saving the model ...")
 		torch.save(self.model.state_dict(), path)
 		print("Saving Done!")
 
 	def load_weights(self,path):
+		"""
+			Load the weights of trained model for further training
+		"""
 		print("Loading the parameters...............")
 		self.model.load_state_dict(torch.load(path))
 		self.model.eval()

@@ -92,12 +92,21 @@ class Test:
         self.load_weights(self.save_path)
 
     def test(self):
+        """
+            Run test 
+        """
         valid_acc,valid_iou = self.check_accuracy(self.valid_loader)
         print("valid accuracy: {} \t valid ious {}".format(valid_acc,valid_iou))
 
         # self.record.add_scalar("Validation miou", valid_miou.item(), epoch)
 
     def check_accuracy(self, dataloader):
+        """
+            Compute the accuracy
+            Return:
+                test accuracy of trained model
+                save prediction and ground truth images
+        """
         accs = []
         if os.path.exists('./result_images') == False:
             os.mkdir('./result_images')
@@ -116,7 +125,7 @@ class Test:
 
                 y_hat = torch.argmax(out, dim=1)
                 if self.visualize:
-                    visualize(y_hat,y,'./result_images/{}'.format(i))
+                    visualize(y_hat,y_one_hot,'./result_images/{}'.format(i))
                 y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
 
                 b_acc = pixel_acc(y_hat, y)
@@ -130,6 +139,9 @@ class Test:
         return np.mean(accs),np.mean(ious[~np.isnan(ious)])
 
     def load_weights(self,path):
+        """
+            Load weights of trained model for test
+        """
         print("Loading the parameters")
         self.model.load_state_dict(torch.load(path))
         self.model.eval()
