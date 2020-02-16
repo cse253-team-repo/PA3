@@ -137,7 +137,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("Unet_config.yaml")
+    config = load_config("config/aspp.yaml")
     print(config)
     train = Test(config)
     train.test()
