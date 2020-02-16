@@ -143,8 +143,19 @@ def plot(epoch, loss_epoch, name, valid_accs, valid_iou):
              "train_loss": loss_epoch,
              "valid_accs": valid_accs,
              "valid_ious": valid_iou}
+    curve = update_json(curve, name)
     with open("curves_{}.json".format(name), 'w') as f:
         json.dump(curve, f)
+
+def update_json(curve1, name):
+    f_name = "curves_{}.json".format(name)
+    with open(f_name, 'w') as f:
+        curve2 = json.load(f)
+        new_curve = {"epoch": curve2.get("epoch",0) + curve1["epoch"]}
+        for key in curve1.keys(): 
+            if key != "epoch":
+                new_curve[key] = curve2.get(key, []) + curve1[key]
+    return new_curve
 
 
 def to_one_hot(label,num_class):
