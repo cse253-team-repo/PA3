@@ -4,6 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 import time
+
 from model.ASPP import Deeplab
 from model.basic_fcn import FCN
 from model.models import UNet, UNet_BN, FCN_backbone
@@ -73,7 +74,7 @@ class Train:
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
-		if self.num_gpus > 1:
+		if self.num_gpus > 0:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
 
 		if "model_save_path" in config and config["model_save_path"] != "" and config["model_save_path"][-2:] == "pt":
@@ -115,7 +116,7 @@ class Train:
 									  batch_size=4,
 									  shuffle=True,drop_last=True,
 									  num_workers=2)
-		if self.retrain == True:
+		if self.retrain == False:
 			self.load_weights(self.save_path)
 
 
