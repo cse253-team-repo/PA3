@@ -12,29 +12,86 @@ We implemented the following network architecture
 
 We utilized yaml file to store the hyperparameter settings for each network. To run the corresponding network, please pass the correct yaml file to `load_config` function in `train.py/test.py`.  
 
+## Configuration file
+
+We use yaml file to store the parameters. An example of ASPP module is shown as below:
+
+```yaml
+model: "Deeplab" # specify the model name
+loss_method: "cross-entropy"
+opt_method: "Adam"
+batch_size: 16
+img_shape: [512,512]
+epochs: 100
+num_classes: 19
+lr: 0.01 
+GPU: True # True if use GPU
+backbone: "resnet101" # specify the backbone name to use
+save_best: True # Use early stop to store the best model
+retrain: False # True if retrain the whole model
+retrain_backbone: True # True if fintune the torch backbone like resnet50
+use_torch_model: True
+CUDA_DIX: [0, 1] # specify the GPU to use
+model_save_path: "" # if specified use the this path to save model 
+                    # otherwise use the default path to save model
+visualize: False # If true generate figures in the test.py script
+```
+
+
+
 ## Train the model
 
+To train the model use the following command. 
 
+```bash
+python train.py
+```
 
 ## Test the model
 
-
-
-
-
-## ASPP module
-
-In model/ASPP.py, we implemented the Astrous Spatial Pyramid Pooling (AKA ASPP) with 2 versions. 
-
-* The first version is to use resnet as encoder and ASPP plus a upsampling as classifier. To use this version set `use_torch_model: True` in `config/aspp.yaml`. 
-* The second version is modefied based on our UNet architecture. We use skip connection and encoder-decoder architecture while utilizing ASPP in the decoder part. To use this version set `use_torch_model: False` in `config/aspp.yaml`.
-
-To train/test this network, please pass `aspp.yaml` to `load_config` in `train.py/test.py`. 
-
-To just test the shape test for this module, run:
+To test the model use the following command
 
 ```bash
-python model/ASPP.py
+python test.py
+```
+
+## Models
+
+* In `model/models.py`, we implemented:
+  * FCN
+  * UNet without batchnormalization
+  * UNet with batchnormalization
+  * FCN+backbone
+
+* In` model/basic_fcn.py`, we implemented 
+  * FCN
+
+* In `model/ASPP.py`, we implemented the Astrous Spatial Pyramid Pooling (AKA ASPP) with 2 versions. 
+  * The first version is to use resnet as encoder and ASPP plus a upsampling as classifier. To use this version set `use_torch_model: True` in `config/aspp.yaml`. 
+
+  * The second version is modefied based on our UNet architecture. We use skip connection and encoder-decoder architecture while utilizing ASPP in the decoder part. To use this version set `use_torch_model: False` in `config/aspp.yaml`.
+
+    To train/test this network, please pass `aspp.yaml` to `load_config` in `train.py/test.py`. 
+
+    To just test the shape test for this module, run:
+
+    ```bash
+    python model/ASPP.py
+    ```
+
+* In `/model/Loss.py`, we implemented the loss function including:
+  * cross entropy
+  * dice loss
+  * WCEloss
+  * OhemCELoss
+  * SoftmaxFocalLoss
+
+## Utils file
+
+In utils folder, there is some utils functions and dataloader. To test dataloader, run:
+
+```bash
+python utils/dataloader.py
 ```
 
 
@@ -44,20 +101,3 @@ python model/ASPP.py
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-Unet bn
-[0.76558155 0.57691383 0.77113068 0.12833847 0.22157449 0.45102286
- 0.36401013 0.55917227 0.87275022 0.43038559 0.81529766 0.46183452
- 0.15253368 0.77989101 0.04093395 0.11353317 0.01616228 0.09720594
- 0.48719034]
-valid accuracy: 0.9106153805324106 	 valid ious 0.4266032968696795
