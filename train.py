@@ -115,7 +115,7 @@ class Train:
 									  batch_size=4,
 									  shuffle=True,drop_last=True,
 									  num_workers=2)
-		if self.retrain == True:
+		if self.retrain == False:
 			self.load_weights(self.save_path)
 
 
