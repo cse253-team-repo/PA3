@@ -1,16 +1,18 @@
-import json
-import time
-
-import numpy as np
 import torch
 import yaml
+import time
+import numpy as np
+import json
 from PIL import Image
-
 from utils.dataloader import labels_classes
+
+import pdb
 
 color_array = []
 for i in labels_classes:
-        if i.trainId != 255:
+        if i.ignoreInEval == False:
+            color_array.append(i.color)
+        else:
             color_array.append(i.color)
 color_array = np.array(color_array)
 
@@ -113,13 +115,6 @@ def pixel_acc(y_hat, y):
     return correct / N
 
 def visualize(pred, label,filename):
-    """
-        Convert Pytorch tensors to rgb images
-        Args:
-            pred: prediction label
-            label: one_hot label
-            filename: the name of the images to be saved
-    """
 
     pred_img = color_array[pred.detach().cpu().numpy()] # batch_size, h, w, 3
     label_img = color_array[label.detach().cpu().numpy()]
@@ -129,19 +124,8 @@ def visualize(pred, label,filename):
     pred_img.save(filename+'pred.jpg')
     label_img.save(filename+'label.jpg')
 
-def plot(epoch, loss_epoch, name, valid_loss, valid_accs, valid_iou):
-    """
-        Save the training curves to a json file
-        Args:
-            epoch: current epoch
-            loss_epoch: training loss curve
-            name: model name
-            valid_accs: validation accuracy
-            valid_iou: validation iou
-    """
-    curve = {"epoch": epoch,
-             "train_loss": loss_epoch,
-             "valid_loss": valid_loss,
+def plot(loss_epoch, name, valid_accs, valid_iou):
+    curve = {"train_loss": loss_epoch,
              "valid_accs": valid_accs,
              "valid_ious": valid_iou}
     with open("curves_{}.json".format(name), 'w') as f:
@@ -149,12 +133,6 @@ def plot(epoch, loss_epoch, name, valid_loss, valid_accs, valid_iou):
 
 
 def to_one_hot(label,num_class):
-    """
-        Convert label to one_hot tensor
-        Args:
-            label: ground truth class label
-            num_classed: number of the classes in total
-    """
     label_one_hot = torch.eye(num_class)[label]
     return label_one_hot.permute([0,3,1,2])
 

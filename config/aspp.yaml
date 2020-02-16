@@ -9,7 +9,7 @@ lr: 0.01
 GPU: True
 backbone: "resnet101"
 save_best: True
-retrain: False # True if retrain the whole model
+retrain: True # True if retrain the whole model
 retrain_backbone: True # True if fintune the torch backbone like resnet50
 use_torch_model: True
 CUDA_DIX: [0] # specify the GPU to use

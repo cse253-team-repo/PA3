@@ -4,6 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 import time
+
 from model.ASPP import Deeplab
 from model.basic_fcn import FCN
 from model.models import UNet, UNet_BN, FCN_backbone
@@ -73,7 +74,7 @@ class Train:
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
-		if self.num_gpus > 1:
+		if self.num_gpus > 0:
 			self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
 
 		if "model_save_path" in config and config["model_save_path"] != "" and config["model_save_path"][-2:] == "pt":
@@ -135,7 +136,11 @@ class Train:
 		print(class_count)
 
 	def train_on_batch(self, verbose=True, lr_decay=True):
-
+		"""
+			Perform minibatch gradient descent
+			Returns:
+				the trained model with the best validation accuracy
+		"""
 		# class_pix = np.sqrt(CLASS_PIX)
 		# weighted = 5 * class_pix.min() / class_pix
 		# weighted = torch.tensor(weighted).float().to(self.device)
@@ -146,6 +151,7 @@ class Train:
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
 		loss_epoch = []
+		valid_loss = []
 		valid_accs = []
 		valid_ious = []
 		MAX = 0
@@ -187,11 +193,17 @@ class Train:
 					print("Saving model")
 					self.save_weights(self.save_path)
 					MAX = valid_iou
+			valid_loss.append(valid_loss)
 			valid_accs.append(valid_acc)
 			valid_ious.append(valid_iou)
-			plot(epoch, loss_epoch=loss_epoch, name=self.model_name, valid_accs=valid_accs, valid_iou=valid_ious)
+			plot(epoch, loss_epoch=loss_epoch, name=self.model_name, valid_loss=valid_loss, valid_accs=valid_accs, valid_iou=valid_ious)
 
 	def check_accuracy(self, dataloader, get_loss=True):
+		"""
+			Compute the validation accuracy
+			return:
+				validation accuracy
+		"""
 		accs = []
 		losses = []	
 		ioucomputer = IOU(self.num_classes)
@@ -226,11 +238,17 @@ class Train:
 		return np.mean(accs),np.mean(ious[~np.isnan(ious)])
 
 	def save_weights(self,path):
+		"""
+			Save the weights of trained model
+		"""
 		print("Saving the model ...")
 		torch.save(self.model.state_dict(), path)
 		print("Saving Done!")
 
 	def load_weights(self,path):
+		"""
+			Load the weights of trained model for further training
+		"""
 		print("Loading the parameters...............")
 		self.model.load_state_dict(torch.load(path))
 		self.model.eval()

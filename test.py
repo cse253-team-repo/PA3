@@ -55,6 +55,7 @@ class Test:
         self.model_name = model
 
         if model=="Deeplab":
+            self.save_path = "my_model_{}".format(model)+("_"+config["backbone"] if config["use_torch_model"] else "")+".pt"
             self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
                                                 retrain_backbone=config["retrain_backbone"],
                                                  backbone=config["backbone"]).to(self.device)
@@ -137,7 +138,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    config = load_config("Unet_config.yaml")
+    config = load_config("config/aspp.yaml")
     print(config)
     train = Test(config)
     train.test()
