@@ -4,9 +4,9 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 import time
-from model.ASPP import Deeplab,Deeplab_yxy
+
+from model.ASPP import Deeplab
 from model.basic_fcn import FCN
-from  model.Loss import Diceloss
 from model.models import UNet, UNet_BN, FCN_backbone
 from utils.dataloader import *
 from utils.utils import *
@@ -55,8 +55,7 @@ class Train:
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
 					"Deeplabv3": deeplabv3_resnet50,
-					"Deeplab_yxy": Deeplab_yxy,
-					"Deeplab": Deeplab
+					"Deeplab": Deeplab,
 					}
 		self.model_name = model
 		if model=="FCN":
@@ -74,17 +73,17 @@ class Train:
 			self.save_path = "my_model_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
-		self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
+
+		if self.num_gpus > 0:
+			self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
 
 		if "model_save_path" in config and config["model_save_path"] != "" and config["model_save_path"][-2:] == "pt":
 			self.save_path = config["model_save_path"]
 		print("You will save the model in the path: {}".format(self.save_path))
 
 		transform = transforms.Compose([
-			RandomColor(),
 			RandomFlip(),
 			RandomRescale(0.8,1.2),
-			RandomRotation(),
 			RandomCrop(img_shape),
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
@@ -137,10 +136,6 @@ class Train:
 		print(class_count)
 
 	def train_on_batch(self, verbose=True, lr_decay=True):
-
-		class_pix = np.sqrt(CLASS_PIX)
-		weighted = 5 * class_pix.min() / class_pix
-		weighted = torch.tensor(weighted).float().to(self.device)
 		"""
 			Perform minibatch gradient descent
 			Returns:
@@ -156,6 +151,7 @@ class Train:
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
 		loss_epoch = []
+		valid_losses = []
 		valid_accs = []
 		valid_ious = []
 		MAX = 0
@@ -197,10 +193,10 @@ class Train:
 					print("Saving model")
 					self.save_weights(self.save_path)
 					MAX = valid_iou
-			valid_loss.append(valid_loss)
+			valid_losses.append(valid_loss)
 			valid_accs.append(valid_acc)
 			valid_ious.append(valid_iou)
-			plot(epoch, name=self.model_name, valid_accs=valid_accs, valid_iou=valid_ious)
+			plot(epoch, loss_epoch=loss_epoch, name=self.model_name, valid_loss=valid_losses, valid_accs=valid_accs, valid_iou=valid_ious)
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		"""
@@ -212,12 +208,8 @@ class Train:
 		losses = []	
 		ioucomputer = IOU(self.num_classes)
 		self.model.eval()
-
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
-		elif self.loss_method == "Dice":
-			criterio = Diceloss()
-
+			criterio = nn.CrossEntropyLoss(ignore_index=-1)
 		with torch.no_grad():
 			for i, data in enumerate(dataloader):
 				x, y_one_hot, y = data
@@ -229,10 +221,7 @@ class Train:
 					out = self.model(x)["out"]
 				else:
 					out = self.model(x)
-				if self.loss_method == "cross-entropy":
-					loss = criterio(out, y)
-				elif self.loss_method == "Dice":
-					loss = criterio(out, y_one_hot)
+				loss = criterio(out, y)
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out, dim=1)
 				y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)
@@ -266,7 +255,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("config/base_fc_config.yaml")
+	config = load_config("config/Unet_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 
