@@ -44,7 +44,6 @@ class Test:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() and GPU else "cpu")
         self.num_gpus = len(self.gpus)
-        print(self.gpus)
 
         networks = {"UNet":UNet,
                     "base_fc":FCN,
@@ -64,12 +63,12 @@ class Test:
                                                 retrain_backbone=config["retrain_backbone"],
                                                  backbone=config["backbone"]).to(self.device)
         else:
-            self.save_path = "my_model_dice_{}.pt".format(model)
+            self.save_path = "my_model_{}.pt".format(model)
             self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
-        # if self.num_gpus > 1:
-        self.model = nn.DataParallel(self.model, device_ids=self.gpus)
+        if self.num_gpus > 1:
+            self.model = nn.DataParallel(self.model, device_ids=self.gpus)
 
         test_transform = transforms.Compose([
             ToTensor(),
@@ -84,14 +83,15 @@ class Test:
             len(self.valid_dst),
             len(self.test_dst)))
 
+        # self.new_val,_ = random_split(self.valid_dst,[10,len(self.valid_dst)-10])
         self.valid_loader = DataLoader(self.valid_dst,
                                        batch_size=1,
                                        shuffle=True,
-                                       num_workers=0)
+                                       num_workers=1)
         self.test_loader = DataLoader(self.test_dst,
-                                      batch_size=2,
+                                      batch_size=1,
                                       shuffle=True,
-                                      num_workers=0)
+                                      num_workers=1)
         print(self.save_path)
         self.load_weights(self.save_path)
 

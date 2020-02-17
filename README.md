@@ -2,58 +2,102 @@
 
 Semantic segmentation
 
-FCN baseline
-[7.30241179e-01 3.32855314e-01 6.31398380e-01 4.79245995e-04
- 4.89278836e-03 1.26147553e-01 0.00000000e+00 2.01303989e-01
- 7.97311604e-01 3.06767225e-01 7.65498996e-01 3.01871002e-01
- 0.00000000e+00 5.07823408e-01 0.00000000e+00 0.00000000e+00
- 0.00000000e+00 0.00000000e+00 1.22203693e-01]
-valid accuracy: 0.8313693035693839 	 valid ious 0.2541470724681858
+We implemented the following network architecture
 
-FCN baseline weighted
-[7.51631737e-01 3.85198027e-01 6.65327966e-01 1.13397270e-01
- 1.62945315e-01 2.85945386e-01 1.56231195e-01 3.51170719e-01
- 8.15237820e-01 3.47734809e-01 7.43639052e-01 3.37053925e-01
- 5.80587909e-02 5.26960194e-01 1.52075618e-05 7.42391124e-02
- 1.38068618e-02 6.51845485e-02 3.01597744e-01]
-valid accuracy: 0.8365317358563858       valid ious 0.32396714105001784
+* FCN
+* UNet
+* ResNet+ASPP
+* UNet (Skip connection) + ASPP
+* ResNet+decoder
 
-FCN baseline dice
-[8.23633015e-01 4.06612396e-01 7.10122526e-01 6.01044670e-02
- 5.85489832e-02 2.16648847e-01 1.19540622e-04 2.80434281e-01
- 8.41342866e-01 3.18277240e-01 8.07833970e-01 3.42988700e-01
- 5.51283756e-06 6.25492811e-01 0.00000000e+00 0.00000000e+00
- 0.00000000e+00 0.00000000e+00 1.26702085e-01]
-valid accuracy: 0.8709270761440688   valid ious 0.29572985473872615
+We utilized yaml file to store the hyperparameter settings for each network. To run the corresponding network, please pass the correct yaml file to `load_config` function in `train.py/test.py`.  
+
+## Configuration file
+
+We use yaml file to store the parameters. An example of ASPP module is shown as below:
+
+```yaml
+model: "Deeplab" # specify the model name
+loss_method: "cross-entropy"
+opt_method: "Adam"
+batch_size: 16
+img_shape: [512,512]
+epochs: 100
+num_classes: 19
+lr: 0.01 
+GPU: True # True if use GPU
+backbone: "resnet101" # specify the backbone name to use
+save_best: True # Use early stop to store the best model
+retrain: False # True if retrain the whole model
+retrain_backbone: True # True if fintune the torch backbone like resnet50
+use_torch_model: True
+CUDA_DIX: [0, 1] # specify the GPU to use
+model_save_path: "" # if specified use the this path to save model 
+                    # otherwise use the default path to save model
+visualize: False # If true generate figures in the test.py script
+```
 
 
-Unet bn
-[0.76558155 0.57691383 0.77113068 0.12833847 0.22157449 0.45102286
- 0.36401013 0.55917227 0.87275022 0.43038559 0.81529766 0.46183452
- 0.15253368 0.77989101 0.04093395 0.11353317 0.01616228 0.09720594
- 0.48719034]
-valid accuracy: 0.9106153805324106 	 valid ious 0.4266032968696795
 
-FCN resnet50
-[7.57946491e-01
-5.16903460e-01
-7.31663048e-01
-3.01460642e-02
- 6.08708570e-03
- 4.26573008e-02
- 0.00000000e+00
- 2.02575713e-01
- 8.29552948e-01
- 3.62801403e-01
- 8.31954777e-01
- 3.24804872e-01
- 0.00000000e+00
- 7.18937099e-01
- 5.57212683e-04
- 1.87122394e-04
- 5.30782563e-04
- 0.00000000e+00
- 1.71973988e-01]
-valid accuracy: 0.8803274661511491 	 valid ious 0.29101470365927334
+## Train the model
+
+To train the model use the following command. 
+
+```bash
+python train.py
+```
+
+## Test the model
+
+To test the model use the following command
+
+```bash
+python test.py
+```
+
+## Models
+
+* In `model/models.py`, we implemented:
+  * FCN
+  * UNet without batchnormalization
+  * UNet with batchnormalization
+  * FCN+backbone
+
+* In` model/basic_fcn.py`, we implemented 
+  * FCN
+
+* In `model/ASPP.py`, we implemented the Astrous Spatial Pyramid Pooling (AKA ASPP) with 2 versions. 
+  * The first version is to use resnet as encoder and ASPP plus a upsampling as classifier. To use this version set `use_torch_model: True` in `config/aspp.yaml`. 
+
+  * The second version is modefied based on our UNet architecture. We use skip connection and encoder-decoder architecture while utilizing ASPP in the decoder part. To use this version set `use_torch_model: False` in `config/aspp.yaml`.
+
+    To train/test this network, please pass `aspp.yaml` to `load_config` in `train.py/test.py`. 
+
+    To just test the shape test for this module, run:
+
+    ```bash
+    python model/ASPP.py
+    ```
+
+* In `/model/Loss.py`, we implemented the loss function including:
+  * cross entropy
+  * dice loss
+  * WCEloss
+  * OhemCELoss
+  * SoftmaxFocalLoss
+
+## Utils file
+
+In utils folder, there is some utils functions and dataloader. To test dataloader, run:
+
+```bash
+python utils/dataloader.py
+```
+
+
+
+
+
+
 
 

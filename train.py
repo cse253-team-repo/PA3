@@ -64,14 +64,14 @@ class Train:
 			self.save_path = "my_model_{}_{}.pt".format(model, backbone)
 			self.model = networks[self.model_name](num_classes = self.num_classes,
 												   backbone=backbone).to(self.device)
-		elif model=="Deeplab":
+		if model=="Deeplab":
 			backbone = config["backbone"]
 			self.save_path = "my_model_{}".format(model) + ("_"+backbone if config["use_torch_model"] else "") +".pt"
 			self.model = networks[self.model_name](num_classes = self.num_classes, use_torch_model=config["use_torch_model"],
 												retrain_backbone=config["retrain_backbone"],
 												 backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_augment_{}.pt".format(model)
+			self.save_path = "my_model_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 		self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
@@ -108,17 +108,17 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,drop_last=True,
-									   num_workers=1)
+									   num_workers=2)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,drop_last=True,
-									   num_workers=1)
+									   num_workers=2)
 		self.test_loader = DataLoader(self.test_dst,
 									  batch_size=4,
 									  shuffle=True,drop_last=True,
-									  num_workers=1)
+									  num_workers=2)
 		if self.retrain == False:
-			self.load_weights("my_model_base_fc.pt")
+			self.load_weights(self.save_path)
 
 
 
@@ -141,14 +141,20 @@ class Train:
 		class_pix = np.sqrt(CLASS_PIX)
 		weighted = 5 * class_pix.min() / class_pix
 		weighted = torch.tensor(weighted).float().to(self.device)
+		"""
+			Perform minibatch gradient descent
+			Returns:
+				the trained model with the best validation accuracy
+		"""
+		# class_pix = np.sqrt(CLASS_PIX)
+		# weighted = 5 * class_pix.min() / class_pix
+		# weighted = torch.tensor(weighted).float().to(self.device)
 		if self.opt_method == "Adam":
 			optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
-		elif self.loss_method == "Dice":
-			criterio = Diceloss()
 		loss_epoch = []
 		valid_accs = []
 		valid_ious = []
@@ -170,10 +176,7 @@ class Train:
 				else:
 					output = self.model(img)
 				# print(train_y_one_hot.shape,output.shape)
-				if self.loss_method == "cross-entropy":
-					loss = criterio(output, train_y)
-				elif self.loss_method == "Dice":
-					loss = criterio(output, train_y_one_hot)
+				loss = criterio(output, train_y)
 				loss.backward()
 				optimizer.step()
 				loss_itr.append(loss.item())
@@ -194,11 +197,17 @@ class Train:
 					print("Saving model")
 					self.save_weights(self.save_path)
 					MAX = valid_iou
+			valid_loss.append(valid_loss)
 			valid_accs.append(valid_acc)
 			valid_ious.append(valid_iou)
 			plot(epoch, name=self.model_name, valid_accs=valid_accs, valid_iou=valid_ious)
 
 	def check_accuracy(self, dataloader, get_loss=True):
+		"""
+			Compute the validation accuracy
+			return:
+				validation accuracy
+		"""
 		accs = []
 		losses = []	
 		ioucomputer = IOU(self.num_classes)
@@ -212,6 +221,7 @@ class Train:
 		with torch.no_grad():
 			for i, data in enumerate(dataloader):
 				x, y_one_hot, y = data
+
 				x = x.to(self.device)
 				y_one_hot = y_one_hot.to(self.device)
 				y = y.to(self.device)
@@ -239,11 +249,17 @@ class Train:
 		return np.mean(accs),np.mean(ious[~np.isnan(ious)])
 
 	def save_weights(self,path):
+		"""
+			Save the weights of trained model
+		"""
 		print("Saving the model ...")
 		torch.save(self.model.state_dict(), path)
 		print("Saving Done!")
 
 	def load_weights(self,path):
+		"""
+			Load the weights of trained model for further training
+		"""
 		print("Loading the parameters...............")
 		self.model.load_state_dict(torch.load(path))
 		self.model.eval()
