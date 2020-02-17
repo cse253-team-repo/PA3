@@ -151,7 +151,7 @@ class Train:
 		if self.loss_method == "cross-entropy":
 			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
 		loss_epoch = []
-		valid_loss = []
+		valid_losses = []
 		valid_accs = []
 		valid_ious = []
 		MAX = 0
@@ -193,10 +193,10 @@ class Train:
 					print("Saving model")
 					self.save_weights(self.save_path)
 					MAX = valid_iou
-			valid_loss.append(valid_loss)
+			valid_losses.append(valid_loss)
 			valid_accs.append(valid_acc)
 			valid_ious.append(valid_iou)
-			plot(epoch, loss_epoch=loss_epoch, name=self.model_name, valid_loss=valid_loss, valid_accs=valid_accs, valid_iou=valid_ious)
+			plot(epoch, loss_epoch=loss_epoch, name=self.model_name, valid_loss=valid_losses, valid_accs=valid_accs, valid_iou=valid_ious)
 
 	def check_accuracy(self, dataloader, get_loss=True):
 		"""
@@ -255,7 +255,7 @@ class Train:
 
 
 if __name__ == "__main__":
-	config = load_config("config/aspp.yaml")
+	config = load_config("config/Unet_config.yaml")
 	train = Train(config)
 	train.train_on_batch()
 

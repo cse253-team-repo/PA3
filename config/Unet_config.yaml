@@ -1,7 +1,7 @@
 model: "UNet_BN"
 loss_method: "cross-entropy"
 opt_method: "Adam"
-batch_size: 8
+batch_size: 10
 img_shape: [608,608]
 epochs: 100
 num_classes: 19
