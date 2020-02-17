@@ -3,7 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from models import *
+from torchvision.models._utils import IntermediateLayerGetter
+
 import pdb
 pretrained_models = {
             'resnext50':torchvision.models.resnext50_32x4d,
@@ -203,11 +204,36 @@ class Deeplab(BasicModel):
 		return out
 
 
+class Deeplab_yxy(BasicModel):
+	def __init__(self, num_classes,
+				use_torch_model=False,
+				retrain_backbone=True,
+				backbone='resnet50'):
+		super(Deeplab_yxy, self).__init__(num_classes, use_torch_model, retrain_backbone, backbone)
+
+		encoder = torchvision.models.resnet.__dict__[backbone](
+			pretrained=True,
+			replace_stride_with_dilation=[False, True, True])
+		layer_dict = {'layer3':'out2','layer4':'out1'}
+		self.encoder = IntermediateLayerGetter(encoder,layer_dict)
+		self.aspp1 = ASPP(2048, num_classes, h_channel=256)
+		self.aspp2 = ASPP(1024, num_classes, h_channel=256)
+
+	def forward(self, x):
+
+		in_shape = x.shape[2:]
+		# use pretrained resnet as backbone
+		x = self.encoder(x)
+		#pdb.set_trace()
+		x1 = self.aspp1(x['out1'])
+		x2 = self.aspp2(x['out2'])
+		out = F.interpolate(x1+x2, size=in_shape, mode="bilinear", align_corners=True)
+		return out
 
 
 if __name__ == "__main__":
 	x = torch.randn(2,3,256, 512)
-	model = Deeplab(12, use_torch_model=True)
+	model = Deeplab_yxy(12, use_torch_model=True)
 	print(model)
 	y = model(x)
 	print(y.shape)

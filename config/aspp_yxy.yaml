@@ -1,0 +1,18 @@
+model: "Deeplab_yxy"
+loss_method: "cross-entropy"
+opt_method: "Adam"
+batch_size: 6
+img_shape: [800,800]
+epochs: 100
+num_classes: 19
+lr: 0.01
+GPU: True
+backbone: "resnet50"
+save_best: True
+retrain: True # True if retrain the whole model
+retrain_backbone: True # True if fintune the torch backbone like resnet50
+use_torch_model: True
+CUDA_DIX: [0, 1] # specify the GPU to use
+model_save_path: "" # if specified use the this path to save model 
+                    # otherwise use the default path "my_model_{}_{}.pt".format(model, backbone) to save model
+visualize: False

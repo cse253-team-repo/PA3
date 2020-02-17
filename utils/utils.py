@@ -60,6 +60,7 @@ class IOU:
         self.union = torch.zeros(n_class).cuda()
         self.intersection = torch.zeros(n_class).cuda()
         self.n_class = n_class
+
     def UpdateIou(self,pred, target, output=True):
         """
             Update the intersection and union arrays for each batch of data and return the ious for this batch.

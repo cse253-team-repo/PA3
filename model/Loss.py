@@ -2,17 +2,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class Diceloss(torch.nn.Module):
+class Diceloss(nn.Module):
     def init(self):
-        super(Diceloss, self).init()
+        super(Diceloss, self).__init__()
+
     def forward(self,pred, target):
-       smooth = 1.
-       iflat = pred.contiguous().view(-1)
-       tflat = target.contiguous().view(-1)
-       intersection = (iflat * tflat).sum()
-       A_sum = torch.sum(iflat * iflat)
-       B_sum = torch.sum(tflat * tflat)
-       return 1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth) )
+
+        smooth = 1.
+        pred = nn.Softmax()(pred)
+        iflat = pred.contiguous().view(-1).cuda()
+        tflat = target.contiguous().view(-1).cuda()
+
+        intersection = (iflat * tflat).sum()
+        A_sum = torch.sum(iflat * iflat)
+        B_sum = torch.sum(tflat * tflat)
+        return 1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth) )
 
 class Loss:
     def __init__(self, method="cross-entropy"):
@@ -30,20 +34,22 @@ class WCELoss(nn.modules.loss._WeightedLoss):
     def __init__(self, gamma=2, weight=None, size_average=None, ignore_index=-1,
                  reduce=None, reduction='mean'):
         super(WCELoss, self).__init__(weight, size_average, reduce, reduction)
-        self.weight = weight
+        if weight:
+            self.weight = torch.tensor(weight)
+        else:
+            self.weight = weight
         self.ignore_index = ignore_index
 
     def forward(self, pred, target):
         n,c,h,w = pred.shape
-        pred = pred.contiguous().view(n, c, 1, -1)
-        target = target.contiguous().view(n, 1, -1)
-        log_prb = F.log_softmax(pred, dim=1)
-        print(pred.shape,target.shape)
+        iflat = pred.contiguous().view(-1).cuda()
+        tflat = target.contiguous().view(-1).cuda()
+        iflat = F.log_softmax(iflat, dim=1)
 
-        one_hot = torch.zeros_like(log_prb)
-        one_hot = one_hot.scatter(1, target, 1)
-        loss = -(self.weight*one_hot * log_prb).sum(dim=1)
-
+        if  self.weight:
+            loss = -(torch.mul(self.weight, iflat * tflat)).sum(dim=-1)
+        else:
+            loss = -(iflat * tflat).sum()
         return loss
 
 class OhemCELoss(nn.Module):
@@ -78,3 +84,4 @@ class SoftmaxFocalLoss(nn.Module):
         log_score = factor * log_score
         loss = self.nll(log_score, labels)
         return loss
+

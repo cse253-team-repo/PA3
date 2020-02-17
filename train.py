@@ -4,8 +4,9 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 import time
-from model.ASPP import Deeplab
+from model.ASPP import Deeplab,Deeplab_yxy
 from model.basic_fcn import FCN
+from  model.Loss import Diceloss
 from model.models import UNet, UNet_BN, FCN_backbone
 from utils.dataloader import *
 from utils.utils import *
@@ -54,6 +55,7 @@ class Train:
 					"FCN":FCN_backbone,
 					"UNet_BN":UNet_BN,
 					"Deeplabv3": deeplabv3_resnet50,
+					"Deeplab_yxy": Deeplab_yxy,
 					"Deeplab": Deeplab
 					}
 		self.model_name = model
@@ -69,20 +71,20 @@ class Train:
 												retrain_backbone=config["retrain_backbone"],
 												 backbone=backbone).to(self.device)
 		else:
-			self.save_path = "my_model_weighted_{}.pt".format(model)
+			self.save_path = "my_model_augment_{}.pt".format(model)
 			self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
-
-		if self.num_gpus > 1:
-			self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
+		self.model = nn.DataParallel(self.model, device_ids=self.gpus).cuda()
 
 		if "model_save_path" in config and config["model_save_path"] != "" and config["model_save_path"][-2:] == "pt":
 			self.save_path = config["model_save_path"]
 		print("You will save the model in the path: {}".format(self.save_path))
 
 		transform = transforms.Compose([
+			RandomColor(),
 			RandomFlip(),
 			RandomRescale(0.8,1.2),
+			RandomRotation(),
 			RandomCrop(img_shape),
 			ToTensor(),
 			Normalize(mean=[0.485, 0.456, 0.406],
@@ -106,15 +108,15 @@ class Train:
 		self.train_loader = DataLoader(self.train_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,drop_last=True,
-									   num_workers=2)
+									   num_workers=1)
 		self.valid_loader = DataLoader(self.valid_dst,
 									   batch_size=self.batch_size,
 									   shuffle=True,drop_last=True,
-									   num_workers=2)
+									   num_workers=1)
 		self.test_loader = DataLoader(self.test_dst,
 									  batch_size=4,
 									  shuffle=True,drop_last=True,
-									  num_workers=2)
+									  num_workers=1)
 		if self.retrain == False:
 			self.load_weights("my_model_base_fc.pt")
 
@@ -144,7 +146,9 @@ class Train:
 			if lr_decay:
 				lr_sheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss(ignore_index=-1,weight=weighted).to(self.device)
+			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
+		elif self.loss_method == "Dice":
+			criterio = Diceloss()
 		loss_epoch = []
 		valid_accs = []
 		valid_ious = []
@@ -166,7 +170,10 @@ class Train:
 				else:
 					output = self.model(img)
 				# print(train_y_one_hot.shape,output.shape)
-				loss = criterio(output, train_y)
+				if self.loss_method == "cross-entropy":
+					loss = criterio(output, train_y)
+				elif self.loss_method == "Dice":
+					loss = criterio(output, train_y_one_hot)
 				loss.backward()
 				optimizer.step()
 				loss_itr.append(loss.item())
@@ -196,12 +203,15 @@ class Train:
 		losses = []	
 		ioucomputer = IOU(self.num_classes)
 		self.model.eval()
+
 		if self.loss_method == "cross-entropy":
-			criterio = nn.CrossEntropyLoss(ignore_index=-1)
+			criterio = nn.CrossEntropyLoss(ignore_index=-1).to(self.device)
+		elif self.loss_method == "Dice":
+			criterio = Diceloss()
+
 		with torch.no_grad():
 			for i, data in enumerate(dataloader):
 				x, y_one_hot, y = data
-
 				x = x.to(self.device)
 				y_one_hot = y_one_hot.to(self.device)
 				y = y.to(self.device)
@@ -209,7 +219,10 @@ class Train:
 					out = self.model(x)["out"]
 				else:
 					out = self.model(x)
-				loss = criterio(out, y)
+				if self.loss_method == "cross-entropy":
+					loss = criterio(out, y)
+				elif self.loss_method == "Dice":
+					loss = criterio(out, y_one_hot)
 				losses.append(loss.cpu().numpy())
 				y_hat = torch.argmax(out, dim=1)
 				y_hat_onehot = to_one_hot(y_hat, self.num_classes).to(self.device)

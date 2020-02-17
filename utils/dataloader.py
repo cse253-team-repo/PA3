@@ -141,6 +141,26 @@ class RandomFlip(object):
         else:
             return img, label
 
+class RandomColor(object):
+    def __init__(self,brightness=0.3,contrast=0.3,saturation=0,hue=0):
+        self.transform = transforms.ColorJitter(brightness,contrast,saturation,hue)
+    def __call__(self, sample):
+        img, label = sample
+        return self.transform(img),label
+
+class RandomRotation(object):
+    def __init__(self, degree=[-3,3]):
+        self.degree = degree
+
+    def __call__(self, sample):
+        img, label = sample
+
+        angle = transforms.RandomRotation.get_params(self.degree)
+
+        img = transforms.functional.rotate(img, angle,resample = Image.BILINEAR)
+        label = transforms.functional.rotate(label, angle)
+        return img, label
+
 class RandomCrop(object):
     def __init__(self,output_size):
         self.output_size = output_size
