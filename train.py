@@ -5,7 +5,7 @@ from torchvision.models.segmentation import deeplabv3_resnet50
 from tqdm import tqdm
 import time
 
-from model.ASPP import Deeplab
+from model.ASPP import Deeplab,Deeplab_yxy
 from model.basic_fcn import FCN
 from model.models import UNet, UNet_BN, FCN_backbone
 from utils.dataloader import *
@@ -56,6 +56,7 @@ class Train:
 					"UNet_BN":UNet_BN,
 					"Deeplabv3": deeplabv3_resnet50,
 					"Deeplab": Deeplab,
+					"Deeplab_yxy":Deeplab_yxy
 					}
 		self.model_name = model
 		if model=="FCN":
