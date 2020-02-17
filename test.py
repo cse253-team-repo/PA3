@@ -67,8 +67,8 @@ class Test:
             self.model = networks[self.model_name](num_classes = self.num_classes).to(self.device)
 
 
-        if self.num_gpus > 1:
-            self.model = nn.DataParallel(self.model, device_ids=self.gpus)
+
+        self.model = nn.DataParallel(self.model, device_ids=self.gpus)
 
         test_transform = transforms.Compose([
             ToTensor(),
@@ -93,7 +93,7 @@ class Test:
                                       shuffle=True,
                                       num_workers=1)
         print(self.save_path)
-        self.load_weights(self.save_path)
+        self.load_weights('my_model_augment_base_fc.pt')
 
     def test(self):
         valid_acc,valid_iou = self.check_accuracy(self.valid_loader)
